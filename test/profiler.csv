@@ -1,0 +1,138 @@
+ncalls,tottime,percall,cumtime,percall,function
+490741,3.557,0.000,3.557,0.000,{built-in method numpy.array}
+189600,2.275,0.000,2.464,0.000,/test/simple3drender.py:274(rotate)
+91583,0.568,0.000,1.503,0.000,/numpy/core/numeric.py:1468(cross)
+549498,0.281,0.000,0.425,0.000,/numpy/core/numeric.py:1330(normalize_axis_tuple)
+274749,0.278,0.000,0.821,0.000,/numpy/core/numeric.py:1393(moveaxis)
+28383,0.218,0.000,4.748,0.000,/test/simple3drender.py:149(draw_triangle_filled)
+20,0.198,0.010,1.946,0.097,/test/simple3drender.py:361(calculate_normal)
+10,0.192,0.019,10.097,1.010,/test/simple3drender.py:430(rotation_animation)
+189419,0.188,0.000,0.322,0.000,/numpy/linalg/linalg.py:2383(norm)
+28383,0.162,0.000,0.180,0.000,/test/simple3drender.py:245(coords_3d_to_screen_coords)
+28383,0.154,0.000,0.530,0.000,/test/simple3drender.py:158(get_barycentric_coords)
+56766,0.152,0.000,0.226,0.000,/numpy/core/shape_base.py:219(vstack)
+148349,0.132,0.000,0.396,0.000,/test/simple3drender.py:424(normalize)
+10,0.131,0.013,0.426,0.043,/test/simple3drender.py:380(clip)
+176732,0.129,0.000,0.129,0.000,{method 'reduce' of 'numpy.ufunc' objects}
+54916,0.108,0.000,0.155,0.000,/numpy/stride_tricks.py:340(_broadcast_to)
+252629,0.089,0.000,0.089,0.000,{method 'dot' of 'numpy.ndarray' objects}
+10,0.084,0.008,2.548,0.255,/test/simple3drender.py:327(rotate_mesh)
+176732,0.077,0.000,0.243,0.000,/numpy/core/fromnumeric.py:71(_wrapreduction)
+28383,0.063,0.000,0.121,0.000,/numpy/linalg/linalg.py:492(inv)
+549498,0.060,0.000,0.092,0.000,/numpy/core/numeric.py:1380(<listcomp>)
+1894762,0.059,0.000,0.059,0.000,{built-in method builtins.len}
+824247,0.051,0.000,0.051,0.000,{built-in method numpy.core._multiarray_umath.normalize_axis_index}
+10,0.051,0.005,0.236,0.024,/test/simple3drender.py:341(project_onto_screen)
+232084,0.047,0.000,0.047,0.000,{method 'astype' of 'numpy.ndarray' objects}
+56766,0.041,0.000,0.064,0.000,/numpy/core/shape_base.py:81(atleast_2d)
+28383,0.040,0.000,0.338,0.000,/numpy/function_base.py:5010(meshgrid)
+274749,0.039,0.000,0.039,0.000,{built-in method builtins.sorted}
+274749,0.032,0.000,0.032,0.000,{method 'transpose' of 'numpy.ndarray' objects}
+176732,0.030,0.000,0.030,0.000,/numpy/core/fromnumeric.py:72(<dictcomp>)
+28383,0.028,0.000,0.235,0.000,/numpy/stride_tricks.py:480(broadcast_arrays)
+287255,0.028,0.000,0.028,0.000,{method 'ravel' of 'numpy.ndarray' objects}
+63200,0.025,0.000,0.113,0.000,/numpy/core/fromnumeric.py:2177(sum)
+246185,0.024,0.000,0.034,0.000,/numpy/linalg/linalg.py:140(isComplexType)
+28383,0.021,0.000,0.035,0.000,/numpy/function_base.py:5150(<listcomp>)
+274749,0.021,0.000,0.021,0.000,/numpy/core/numeric.py:1455(<listcomp>)
+56766,0.021,0.000,0.106,0.000,/numpy/core/fromnumeric.py:2836(min)
+463987,0.021,0.000,0.021,0.000,{built-in method builtins.issubclass}
+56766,0.019,0.000,0.092,0.000,/numpy/core/fromnumeric.py:2692(max)
+28383,0.019,0.000,0.021,0.000,/numpy/stride_tricks.py:416(_broadcast_shape)
+400968,0.019,0.000,0.019,0.000,{built-in method numpy.asarray}
+56766,0.018,0.000,0.018,0.000,{built-in method numpy.arange}
+549498,0.018,0.000,0.018,0.000,{built-in method _operator.index}
+97836,0.018,0.000,0.018,0.000,{method 'reshape' of 'numpy.ndarray' objects}
+170298,0.018,0.000,0.018,0.000,{built-in method numpy.asanyarray}
+56766,0.016,0.000,0.016,0.000,{method 'copy' of 'numpy.ndarray' objects}
+274749,0.015,0.000,0.015,0.000,/numpy/core/numeric.py:1389(_moveaxis_dispatcher)
+28383,0.013,0.000,0.024,0.000,/numpy/linalg/linalg.py:159(_commonType)
+54916,0.013,0.000,0.022,0.000,{built-in method builtins.any}
+91593,0.013,0.000,0.013,0.000,{built-in method numpy.empty}
+274749,0.012,0.000,0.012,0.000,{method 'insert' of 'list' objects}
+189419,0.011,0.000,0.011,0.000,/numpy/linalg/linalg.py:2379(_norm_dispatcher)
+20535,0.010,0.000,0.021,0.000,/test/simple3drender.py:188(<lambda>)
+164748,0.010,0.000,0.010,0.000,/numpy/stride_tricks.py:345(<genexpr>)
+27458,0.010,0.000,0.165,0.000,/numpy/stride_tricks.py:546(<listcomp>)
+56766,0.009,0.000,0.021,0.000,/numpy/core/shape_base.py:215(_vhstack_dispatcher)
+56766,0.008,0.000,0.012,0.000,/numpy/core/shape_base.py:207(_arrays_for_stack_dispatcher)
+28383,0.008,0.000,0.024,0.000,/numpy/function_base.py:5163(<listcomp>)
+28383,0.008,0.000,0.012,0.000,/numpy/stride_tricks.py:538(<listcomp>)
+28383,0.007,0.000,0.011,0.000,/numpy/linalg/linalg.py:135(_makearray)
+176732,0.007,0.000,0.007,0.000,{method 'items' of 'dict' objects}
+54916,0.007,0.000,0.010,0.000,/numpy/function_base.py:348(iterable)
+148389,0.007,0.000,0.007,0.000,{built-in method builtins.isinstance}
+91583,0.006,0.000,0.006,0.000,{built-in method numpy.promote_types}
+54916,0.006,0.000,0.006,0.000,/numpy/stride_tricks.py:25(_maybe_view_as_subclass)
+91583,0.006,0.000,0.006,0.000,/numpy/core/numeric.py:1464(_cross_dispatcher)
+48928,0.006,0.000,3.330,0.000,/numpy/function_base.py:873(copy)
+60057,0.006,0.000,0.006,0.000,/numpy/stride_tricks.py:542(<genexpr>)
+28383,0.005,0.000,0.005,0.000,/numpy/linalg/linalg.py:209(_assert_stacked_square)
+113532,0.005,0.000,0.005,0.000,{method 'append' of 'list' objects}
+28393,0.005,0.000,0.006,0.000,/numpy/matrixlib/defmatrix.py:168(__array_finalize__)
+28383,0.005,0.000,0.006,0.000,/numpy/linalg/linalg.py:153(_realType)
+56766,0.004,0.000,0.004,0.000,{built-in method builtins.hasattr}
+28383,0.004,0.000,0.008,0.000,{built-in method builtins.all}
+56766,0.004,0.000,0.004,0.000,/numpy/core/multiarray.py:153(concatenate)
+54916,0.004,0.000,0.004,0.000,{method '__exit__' of 'numpy.nditer' objects}
+28383,0.004,0.000,0.004,0.000,/numpy/linalg/linalg.py:203(_assert_stacked_2d)
+28383,0.004,0.000,0.004,0.000,/numpy/linalg/linalg.py:130(get_linalg_error_extobj)
+56766,0.004,0.000,0.004,0.000,/numpy/core/fromnumeric.py:2831(_min_dispatcher)
+56766,0.003,0.000,0.003,0.000,/numpy/core/fromnumeric.py:2687(_max_dispatcher)
+63200,0.003,0.000,0.003,0.000,/numpy/core/fromnumeric.py:2172(_sum_dispatcher)
+20535,0.003,0.000,0.003,0.000,{built-in method builtins.max}
+56766,0.003,0.000,0.003,0.000,/numpy/core/shape_base.py:77(_atleast_2d_dispatcher)
+54916,0.003,0.000,0.003,0.000,{built-in method builtins.iter}
+48928,0.003,0.000,0.003,0.000,/numpy/function_base.py:869(_copy_dispatcher)
+28393,0.002,0.000,0.002,0.000,{built-in method builtins.getattr}
+28383,0.002,0.000,0.002,0.000,/numpy/linalg/linalg.py:488(_unary_dispatcher)
+28383,0.002,0.000,0.002,0.000,/numpy/stride_tricks.py:476(_broadcast_arrays_dispatcher)
+20535,0.002,0.000,0.002,0.000,{method '__array_prepare__' of 'numpy.ndarray' objects}
+28383,0.002,0.000,0.002,0.000,/numpy/function_base.py:5005(_meshgrid_dispatcher)
+28383,0.002,0.000,0.002,0.000,{method 'get' of 'dict' objects}
+7848,0.001,0.000,0.001,0.000,/numpy/linalg/linalg.py:111(_raise_linalgerror_singular)
+20,0.000,0.000,0.000,0.000,/numpy/core/numeric.py:67(zeros_like)
+10,0.000,0.000,0.000,0.000,{built-in method _warnings.warn}
+40,0.000,0.000,0.000,0.000,{built-in method numpy.zeros}
+10,0.000,0.000,0.000,0.000,/numpy/core/_methods.py:90(_clip)
+1,0.000,0.000,0.000,0.000,{method 'readlines' of '_io._IOBase' objects}
+10,0.000,0.000,0.000,0.000,/test/simple3drender.py:414(illuminating)
+10,0.000,0.000,0.000,0.000,/numpy/matrixlib/defmatrix.py:116(__new__)
+1,0.000,0.000,0.000,0.000,{built-in method posix.stat}
+1,0.000,0.000,0.000,0.000,{built-in method io.open}
+10,0.000,0.000,0.000,0.000,{built-in method __new__ of type object at 0x104c83370}
+2,0.000,0.000,0.000,0.000,{method 'write' of '_io.TextIOWrapper' objects}
+10,0.000,0.000,0.000,0.000,/numpy/core/fromnumeric.py:53(_wrapfunc)
+2,0.000,0.000,0.000,0.000,/warnings.py:35(_formatwarnmsg_impl)
+10,0.000,0.000,0.000,0.000,{method 'clip' of 'numpy.ndarray' objects}
+10,0.000,0.000,0.000,0.000,/numpy/core/fromnumeric.py:2100(clip)
+1,0.000,0.000,0.000,0.000,/tokenize.py:388(open)
+1,0.000,0.000,0.000,0.000,/linecache.py:80(updatecache)
+1,0.000,0.000,0.000,0.000,{method 'readline' of '_io.BufferedReader' objects}
+4,0.000,0.000,0.000,0.000,{built-in method _codecs.utf_8_decode}
+1,0.000,0.000,0.000,0.000,{method '__exit__' of '_io._IOBase' objects}
+2,0.000,0.000,0.000,0.000,/warnings.py:403(__init__)
+1,0.000,0.000,0.000,0.000,/tokenize.py:295(detect_encoding)
+2,0.000,0.000,0.000,0.000,/linecache.py:36(getlines)
+2,0.000,0.000,0.000,0.000,/warnings.py:20(_showwarnmsg_impl)
+4,0.000,0.000,0.000,0.000,/codecs.py:319(decode)
+20,0.000,0.000,0.000,0.000,/numpy/core/multiarray.py:1080(copyto)
+20,0.000,0.000,0.000,0.000,/numpy/core/numeric.py:63(_zeros_like_dispatcher)
+20,0.000,0.000,0.000,0.000,/numpy/core/multiarray.py:85(empty_like)
+2,0.000,0.000,0.000,0.000,{method 'match' of 're.Pattern' objects}
+2,0.000,0.000,0.000,0.000,/warnings.py:117(_formatwarnmsg)
+10,0.000,0.000,0.000,0.000,/numpy/core/fromnumeric.py:2096(_clip_dispatcher)
+2,0.000,0.000,0.000,0.000,/linecache.py:26(getline)
+1,0.000,0.000,0.000,0.000,/tokenize.py:325(find_cookie)
+2,0.000,0.000,0.000,0.000,/warnings.py:96(_showwarnmsg)
+1,0.000,0.000,0.000,0.000,/codecs.py:309(__init__)
+2,0.000,0.000,0.000,0.000,{method 'strip' of 'str' objects}
+1,0.000,0.000,0.000,0.000,{method 'decode' of 'bytes' objects}
+1,0.000,0.000,0.000,0.000,{method 'startswith' of 'str' objects}
+1,0.000,0.000,0.000,0.000,/tokenize.py:319(read_or_stop)
+1,0.000,0.000,0.000,0.000,/codecs.py:260(__init__)
+1,0.000,0.000,0.000,0.000,{method 'seek' of '_io.BufferedReader' objects}
+1,0.000,0.000,0.000,0.000,{method 'startswith' of 'bytes' objects}
+2,0.000,0.000,0.000,0.000,{built-in method time.time}
+1,0.000,0.000,0.000,0.000,{method 'endswith' of 'str' objects}
+1,0.000,0.000,0.000,0.000,{method 'disable' of '_lsprof.Profiler' objects}

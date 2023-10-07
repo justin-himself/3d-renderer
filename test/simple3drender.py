@@ -1,5 +1,25 @@
+import concurrent.futures as cf
 import numpy as np
+from numpy import cos as c, sin as s
 import cv2
+import time
+import queue
+import os
+
+# animate_by_maplotlib(lambda x: np.random.random((200, 300)), range(1, 100), 30)
+screenHeight = 480
+screenWidth = 720
+aspectRatio = screenHeight / screenWidth
+fov = 90.0 / 360 * 2 * np.pi
+far = 1000
+near = 1
+
+# THREAD_NUMBER = min(32, os.cpu_count() + 4)
+# # max number of frames to be buffered
+# FRAME_BUFFER_SIZE = 1024
+
+frame = np.zeros((screenHeight, screenWidth))
+# frame_buffer = np.zeros((0, screenHeight, screenWidth))
 
 
 def load_obj(file_path):
@@ -90,35 +110,22 @@ def load_obj(file_path):
 #     # The above code is too slow,
 #     # so I will use matplotlib provided animation function
 
-def animate_by_opencv(
-        image_frame_func,
-        frames_index_array,
-        frames_pers_second):
+def animate_by_opencv(image_frame_func, frames_index_array, fps=30):
 
     # get the size of first frame to determine the size of the window
     height, width = image_frame_func(frames_index_array[0]).shape
     cv2.namedWindow('image', cv2.WINDOW_NORMAL)
 
     for frame_idx in frames_index_array:
+
         pixel_matrix = image_frame_func(frame_idx)
         resized_pixel_matrix = cv2.resize(
             pixel_matrix, (width*5, height*5), interpolation=cv2.INTER_NEAREST)
 
         cv2.imshow("image", resized_pixel_matrix)
-        cv2.waitKey(int(1000/frames_pers_second))
+        cv2.waitKey(int(1000/fps))
 
     cv2.destroyAllWindows()
-
-
-# animate_by_maplotlib(lambda x: np.random.random((200, 300)), range(1, 100), 30)
-screenHeight = 100
-screenWidth = 100
-aspectRatio = screenHeight / screenWidth
-fov = 90.0 / 360 * 2 * np.pi
-far = 1000
-near = 1
-
-screenBuffer = np.zeros((screenHeight, screenWidth))
 
 
 def draw_line(srcBuf, row1, col1, row2, col2, colorDepth=1):
@@ -264,43 +271,54 @@ def coords_3d_to_screen_coords(coords, srcWidth, srcHeight):
 
 
 # rotate
-def rotate(vec, x_rad, y_rad, z_rad):
+def rotate(vec, x, y, z):
     """
+    x y z means angle of rotation around around x y z axis in rad
+
     rotate a 3d vector, [x,y,z] or [x,y,z,w] 
     around a given axis, anticlockewise, for given degrees
 
     for example.
     rotate(vec, 0, 1/2 * np.pi, 0) rotates the vector around y axis
         anticlockwise for 90 degrees
+
+    https://faculty.sites.iastate.edu/jia/files/inline-files/homogeneous-transform.pdf
     """
 
-    rotate_x_matrix = np.array(
-        [[1, 0, 0, 0],
-         [0, np.cos(x_rad), -np.sin(x_rad), 0],
-         [0, np.sin(x_rad), np.cos(x_rad), 0],
+    # rotate_x_matrix = np.array(
+    #     [[1, 0, 0, 0],
+    #      [0, c(x), -s(x), 0],
+    #      [0, s(x), c(x), 0],
+    #      [0, 0, 0, 1]]
+    # )
+
+    # rotate_y_matrix = np.array(
+    #     [[c(y), 0, s(y), 0],
+    #      [0, 1, 0, 0],
+    #      [-s(y), 0, c(y), 0],
+    #      [0, 0, 0, 1]]
+    # )
+
+    # rotate_z_matrix = np.array(
+    #     [[c(z), -s(z), 0, 0],
+    #      [s(z), c(z), 0, 0],
+    #      [0, 0, 1, 0],
+    #      [0, 0, 0, 1]]
+    # )
+
+    # rotation_matrix = rotate_z_matrix @ rotate_y_matrix @ rotate_x_matrix
+
+    rotation_matrix = np.array(
+        [[c(y)*c(z), c(z)*s(x)*s(y) - c(x)*s(z), s(x)*s(z) + c(x)*c(z)*s(y), 0],
+         [c(y)*s(z), c(x)*c(z) + s(x)*s(y) * s(z), c(x)*s(y)*s(z) - c(z)*s(x), 0],
+         [-s(y), c(y)*s(x), c(x)*c(y), 0],
          [0, 0, 0, 1]]
     )
-
-    rotate_y_matrix = np.array(
-        [[np.cos(y_rad), 0, np.sin(y_rad), 0],
-         [0, 1, 0, 0],
-         [-np.sin(y_rad), 0, np.cos(y_rad), 0],
-         [0, 0, 0, 1]]
-    )
-
-    rotate_z_matrix = np.array(
-        [[np.cos(z_rad), -np.sin(z_rad), 0, 0],
-         [np.sin(z_rad), np.cos(z_rad), 0, 0],
-         [0, 0, 1, 0],
-         [0, 0, 0, 1]]
-    )
-
-    rotation_matrix = rotate_x_matrix @ rotate_y_matrix @ rotate_z_matrix
 
     if vec.shape[0] == 3:
-        return (np.hstack((vec, [1])) @ rotation_matrix)[:3]
+        return (rotation_matrix @ np.hstack((vec, [1])))[:3]
     else:
-        return vec @ rotation_matrix
+        return rotation_matrix @ vec
 
 
 # rotate the mesh in 3d
@@ -409,7 +427,7 @@ def normalize(vec):
 # animate
 
 
-def rotation_animation(mesh, screenBuffer, frame, fps=30):
+def rotation_animation(mesh, frame, frame_idx, fps=30):
     """
     takes a mesh objected, and output the screen projection 
     of it rotating on all 3 axis in different rates 
@@ -419,15 +437,15 @@ def rotation_animation(mesh, screenBuffer, frame, fps=30):
 
     # rotate the mesh
     # calculate the angle based on frame
-    x_rad = frame / fps * 0.4 * np.pi
+    x_rad = frame_idx / fps * 0.4 * np.pi
     z_rad = 0
-    y_rad = frame / fps * 0.3 * np.pi
+    y_rad = frame_idx / fps * 0.3 * np.pi
     # z_rad = frame / fps * 0.8 * np.pi
     # z_rad = frame / 100 * 2 * np.pi
     result_mesh = rotate_mesh(result_mesh, x_rad, y_rad, z_rad)
 
     # distance it away from screen
-    result_mesh[..., 2] += 18
+    result_mesh[..., 2] += 20
 
     # calculate the normal of the mesh and clip it
     normal_arr = calculate_normal(result_mesh)
@@ -444,21 +462,65 @@ def rotation_animation(mesh, screenBuffer, frame, fps=30):
 
     # draws on screen
     for i in range(len(projected_result_mesh)):
-        screenBuffer = draw_triangle_filled(screenBuffer,
-                                            projected_result_mesh[i],
-                                            colorDepth=color_depth_arr[i])
-        screenBuffer = draw_triangle_frame(screenBuffer,
-                                           projected_result_mesh[i],
-                                           colorDepth=color_depth_arr[i])
+        frame = draw_triangle_filled(frame,
+                                     projected_result_mesh[i],
+                                     colorDepth=color_depth_arr[i])
+        # frame = draw_triangle_frame(frame,
+        #                                    projected_result_mesh[i],
+        #                                    colorDepth=color_depth_arr[i])
 
         # TODO:
         # Draw twice here because the side of triangle will gitch
         # Fix the glitch.
+        # Adding the line heavily reduces the performance.Fix ASAP!
 
-    return screenBuffer
+    return frame
 
 
-origin_mesh = load_obj("test/axis.obj")
+def main():
+    origin_mesh = load_obj("test/teapot.obj")
+    print(origin_mesh.shape)
 
-animate_by_opencv(lambda x: rotation_animation(
-    origin_mesh, screenBuffer, x), range(1, 10000), 30)
+    ## -------- Multithread Rendering Test -------- ##
+
+    # frame_buffer = []
+
+    # time1 = time.time()
+    # with cf.ThreadPoolExecutor(max_workers=8) as executor:
+    #     # Submit the tasks to the executor
+    #     futures = [executor.submit(
+    #         rotation_animation, origin_mesh, frame, i) for i in range(10)]
+
+    #     # Wait for all tasks to complete
+    #     cf.wait(futures)
+
+    #     # Retrieve the results from completed tasks
+    #     frame_buffer = [future.result() for future in futures]
+
+    # time2 = time.time()
+
+    # print(time2 - time1)
+
+    # animate_by_opencv(lambda x: frame_buffer[x], range(0, 100), 20)
+
+    # time3 = time.time()
+    # print(time3-time2)
+
+    ## -------- Single Threaad Rendering -------- ##
+
+    animate_by_opencv(lambda x: rotation_animation(
+        origin_mesh, frame, x, fps=30), range(1, 500), 30)
+
+
+# if __name__ == "__main__":
+#     exit(main())
+
+
+"""
+# TODO:
+1. Phys Lab
+2. Phys Notes
+3. Profiler and read the fucking books
+4. Maths Notes and Maths Thanksgiving Problem
+5. Chem Course recordings
+"""
