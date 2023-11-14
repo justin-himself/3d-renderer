@@ -123,7 +123,7 @@ def animate_by_opencv(image_frame_func, frames_index_array, fps=30):
             pixel_matrix, (width*5, height*5), interpolation=cv2.INTER_NEAREST)
 
         cv2.imshow("image", resized_pixel_matrix)
-        cv2.waitKey(int(1000/fps))
+        key = cv2.waitKey(int(1000/fps))
 
     cv2.destroyAllWindows()
 
@@ -193,6 +193,13 @@ def draw_triangle_filled(srcBuf, triVertexs, colorDepth, colorDepth_func=None):
     max_row = int(np.max(triVertexs[..., 0]))
     min_col = int(np.min(triVertexs[..., 1]))
     max_col = int(np.max(triVertexs[..., 1]))
+
+    # TODO: this is a temporary fix for drawing out of bound
+    min_row = np.maximum(min_row, 0)
+    max_row = np.minimum(max_row, srcBuf.shape[0] - 1)
+    min_col = np.maximum(min_col, 0)
+    max_col = np.minimum(max_col, srcBuf.shape[1] - 1)
+
     row_coords = np.arange(min_row, max_row + 1)
     col_coords = np.arange(min_col, max_col + 1)
 
@@ -353,6 +360,7 @@ def project_onto_screen(mesh, screenWidth, screenHeight):
         projected_2d_mesh[i, ..., :2] = coords_3d_to_screen_coords(
             projected_2d_mesh[i], screenWidth, screenHeight)
     projected_2d_mesh = projected_2d_mesh[..., :2]
+
     return projected_2d_mesh
 
 # calculate normal of every face of mesh
@@ -422,7 +430,10 @@ def illuminating(normal_arr, light_vec=np.array([0, -1, 0])):
 
 # normalise
 def normalize(vec):
-    return vec / np.linalg.norm(vec)
+    norm = np.linalg.norm(vec)
+    if norm == 0:
+        return vec
+    return vec / norm
 
 # animate
 
@@ -438,8 +449,8 @@ def rotation_animation(mesh, frame, frame_idx, fps=30):
     # rotate the mesh
     # calculate the angle based on frame
     x_rad = frame_idx / fps * 0.4 * np.pi
-    z_rad = 0
     y_rad = frame_idx / fps * 0.3 * np.pi
+    z_rad = 0
     # z_rad = frame / fps * 0.8 * np.pi
     # z_rad = frame / 100 * 2 * np.pi
     result_mesh = rotate_mesh(result_mesh, x_rad, y_rad, z_rad)
@@ -512,15 +523,13 @@ def main():
         origin_mesh, frame, x, fps=30), range(1, 500), 30)
 
 
-# if __name__ == "__main__":
-#     exit(main())
+if __name__ == "__main__":
+    exit(main())
 
 
 """
 # TODO:
-1. Phys Lab
-2. Phys Notes
+1. Submit the Chem Lab, read email and complete phys lab
 3. Profiler and read the fucking books
-4. Maths Notes and Maths Thanksgiving Problem
-5. Chem Course recordings
+5. Phycs Reading
 """
