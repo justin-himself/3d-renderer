@@ -2,9 +2,6 @@ import concurrent.futures as cf
 import numpy as np
 from numpy import cos as c, sin as s
 import cv2
-import time
-import queue
-import os
 
 # animate_by_maplotlib(lambda x: np.random.random((200, 300)), range(1, 100), 30)
 screenHeight = 480
@@ -27,7 +24,7 @@ def load_obj(file_path):
     take object file and output a matrix descriping 3d mesh,
     in the format of 
 
-        matrix[tri_no][vertex_no][x, y, z, w]
+        matrix[tri_no][vertex_no][x, y, z]
 
     Where always equals to 1. (Homogeneous Coordinates)
     Plogon faces will be converted into component triangles.
@@ -41,33 +38,38 @@ def load_obj(file_path):
         # f a b c...    - face with vertex indexed a b c
 
     # find starting idx of vertexs
-    vertex_line_base_idx = 0
     for idx, line in enumerate(obj_lines):
         if line[:2] == "v ":
             vertex_line_start_idx = idx
             break
 
     # load object into a matrix like
-    # matrix[tri_no][vertex_no][x, y, z, w]
-    obj_tri_faces = np.empty((0, 3, 4))
+    # matrix[tri_no][vertex_no][x, y, z]
+    mesh = np.empty((0, 3, 3))
+
     for line in obj_lines:
         if line[:2] != "f ":
             continue
-        vertexs = [int(v.split("/")[0])for v in line.split(" ")[1:]]
+        vertexs = [int(v.split("/")[0]) for v in line.split(" ")[1:]]
 
         # get coords
         poly_coords = []
         for v in vertexs:
             coords_line = obj_lines[v - 1 + vertex_line_start_idx]
             poly_coords.append([float(c)
-                               for c in coords_line.split(" ")[1:]] + [1.0])
+                               for c in coords_line.split(" ")[1:]])
 
         # reduce polygon into triangles
         tri_coords = []
         for v_idx in range(1, len(poly_coords) - 1):
             tri_coords.append(
                 [poly_coords[0], poly_coords[v_idx], poly_coords[v_idx + 1]])
-        obj_tri_faces = np.vstack((obj_tri_faces, tri_coords))
+
+        mesh = np.vstack((mesh, tri_coords))
+
+    # scale down the mesh
+    scale_factor = 1 / np.max(get_bounding_box(mesh))
+    mesh = apply_operation_to_mesh(mesh, enlarge_vec, scale_factor)
 
     # coordinate of obj: z pointing up, x to right,  y to in scree
     # coordinate of program: z points in screen, x to right, y to up
@@ -75,7 +77,17 @@ def load_obj(file_path):
     #   and mirror around x-z plane
 
     # obj_tri_faces = rotate_mesh(obj_tri_faces, -np.pi/2, 0, 0)
-    return obj_tri_faces
+    return mesh
+
+
+def get_bounding_box(mesh):
+    x_max = y_max = z_max = 0
+    for tri in mesh:
+        for vertex in tri:
+            x_max = max(x_max, vertex[0])
+            y_max = max(y_max, vertex[1])
+            z_max = max(z_max, vertex[2])
+    return [x_max, y_max, z_max]
 
 
 # test_nd_array = np.array([
@@ -249,40 +261,39 @@ def draw_triangle_frame(srcBuf, triVertexs, colorDepth=1):
     return newSrcBuf
 
 
-def coords_3d_to_screen_coords(coords, srcWidth, srcHeight):
+def enlarge_vec(vec, factor):
     """
-    coords 3d is a matrix[vertex_no][x, y, z, w]
-        where x andh ystarts from -1 and ends at 1
-        the origin is at (0,0)
-    screen cords is a matrix[vertex_no][row, col]
-        where row and col starts from 0 and ends at screenHeight and screenWidth
-        the origin is at (0,0)    
-    the transformation formula is as follows:
-        row = (1 - y/ w)   * screenHeight / 2
-        col = (1 + x/ w)   * screenWidth / 2
-        the z and w is cut off.
+    resize a vector by a scale factor
     """
 
-    # TODO：
-    # Can we do the transformation in matrix form?
-
-    newCoords = np.copy(coords)
-    newCoords[..., 0] = (1 + coords[..., 1] /
-                         coords[..., 3]) * (screenHeight-1) / 2
-    newCoords[..., 1] = (1 - coords[..., 0] /
-                         coords[..., 3]) * (srcWidth-1) / 2
-    newCoords = newCoords[..., :2]
-    newCoords = newCoords.astype(int)
-
-    return newCoords
+    return vec * factor
 
 
-# rotate
-def rotate(vec, x, y, z):
+def apply_operation_to_mesh(mesh, operation_func, *args, **kwargs):
+    """
+    Apply a vector operation function to each vector in the mesh.
+
+    Parameters:
+    - mesh: 3D mesh as a NumPy array
+    - operation_func: Function to apply to each vector in the mesh
+    - *args, **kwargs: Additional arguments to pass to the operation function
+
+    Returns:
+    - Resulting mesh after applying the operation
+    """
+    result_mesh = np.zeros_like(mesh)
+    for i in range(len(mesh)):
+        for j in range(3):
+            result_mesh[i, j] = operation_func(mesh[i, j], *args, **kwargs)
+
+    return result_mesh
+
+
+def rotate_vec(vec, x, y, z):
     """
     x y z means angle of rotation around around x y z axis in rad
 
-    rotate a 3d vector, [x,y,z] or [x,y,z,w] 
+    rotate a 3d vector, [x,y,z]]
     around a given axis, anticlockewise, for given degrees
 
     for example.
@@ -316,59 +327,43 @@ def rotate(vec, x, y, z):
     # rotation_matrix = rotate_z_matrix @ rotate_y_matrix @ rotate_x_matrix
 
     rotation_matrix = np.array(
-        [[c(y)*c(z), c(z)*s(x)*s(y) - c(x)*s(z), s(x)*s(z) + c(x)*c(z)*s(y), 0],
-         [c(y)*s(z), c(x)*c(z) + s(x)*s(y) * s(z), c(x)*s(y)*s(z) - c(z)*s(x), 0],
-         [-s(y), c(y)*s(x), c(x)*c(y), 0],
-         [0, 0, 0, 1]]
+        [[c(y)*c(z), c(z)*s(x)*s(y) - c(x)*s(z), s(x)*s(z) + c(x)*c(z)*s(y)],
+         [c(y)*s(z), c(x)*c(z) + s(x)*s(y) * s(z), c(x)*s(y)*s(z) - c(z)*s(x)],
+         [-s(y), c(y)*s(x), c(x)*c(y)]]
     )
-
-    if vec.shape[0] == 3:
-        return (rotation_matrix @ np.hstack((vec, [1])))[:3]
-    else:
-        return rotation_matrix @ vec
+    return rotation_matrix @ vec
 
 
-# rotate the mesh in 3d
+def project2viewCone_vec(vec, aspectRatio, fov, far, near):
 
-
-def rotate_mesh(mesh, x_rad, y_rad, z_rad):
-    """
-    using matrix multiplication to rotate the mesh
-    """
-
-    rotated_mesh = np.zeros_like(mesh)
-    for i in range(len(mesh)):
-        for j in range(3):
-            rotated_mesh[i, j] = rotate(mesh[i, j], x_rad, y_rad, z_rad)
-
-    return rotated_mesh
-
-
-# project the mesh into 2d screen coords
-def project_onto_screen(mesh, screenWidth, screenHeight):
-
-    projection_matrix = np.matrix(
+    projection_matrix = np.array(
         [[aspectRatio * 1/np.tan(fov/2), 0, 0, 0],
          [0, 1/np.tan(fov/2), 0, 0],
          [0, 0, far/(far - near), 1],
          [0, 0, -near * far/(far - near), 0]]
     )
 
-    projected_2d_mesh = np.zeros_like(mesh)
-    for i in range(len(mesh)):
-        projected_2d_mesh[i] = mesh[i] @ projection_matrix
-        projected_2d_mesh[i, ..., :2] = coords_3d_to_screen_coords(
-            projected_2d_mesh[i], screenWidth, screenHeight)
-    projected_2d_mesh = projected_2d_mesh[..., :2]
+    # make vec homegenous
+    vec = np.hstack((vec, np.ones(1)))
 
-    return projected_2d_mesh
+    vec = vec @ projection_matrix
+    vec = vec[:3] / vec[3]
+    return vec
 
-# calculate normal of every face of mesh
+
+def project2screen_vec(vec, scrHeight, scrWidth):
+    """
+    This function takes a 3d vector of form [x,y,z] and make it 
+    become [row, col, z], where z is not changed.
+    """
+    col = int((vec[0] + 1) / 2 * scrWidth)
+    row = int((1 - (vec[1] + 1) / 2) * scrHeight)
+    return np.array([row, col, vec[2]])
 
 
 def calculate_normal(mesh):
     """
-    input a mesh in 3d space in format of array[n][3][x,y,z,w]
+    input a mesh in 3d space in format of array[n][3][x,y,z]
     output an array of 3d vectors in dicating the normal of each face   
         in format of array[n][x,y,z]
     """
@@ -376,8 +371,8 @@ def calculate_normal(mesh):
     normal_array = np.zeros((len(mesh), 3))
     for idx in range(0, len(mesh)):
         normal_array[idx] = normalize(np.cross(
-            mesh[idx][1][:3] - mesh[idx][0][:3],
-            mesh[idx][2][:3] - mesh[idx][0][:3]
+            mesh[idx][1] - mesh[idx][0],
+            mesh[idx][2] - mesh[idx][0]
         ))
 
     return normal_array
@@ -388,20 +383,20 @@ def calculate_normal(mesh):
 def clip(mesh,
          normal_array,
          camera_vec=np.array([0, 0, 0]),
-         camera_posvec=np.array([0, 0, 0, 1]),
+         camera_posvec=np.array([0, 0, 0]),
          camera_fov=90.0 / 360 * 2 * np.pi
          ):
     """
     parameters:
-        - 3d mesh in format of mesh[n][3][x,y,z,w]
+        - 3d mesh in format of mesh[n][3][x,y,z]
         - normal in for format of normal[n][x,y,z]
         - camera in format of camera[x,y,z]
-    returns the clipped mesh in format of mesh[n][3][x,y,z,w]
+    returns the clipped mesh in format of mesh[n][3][x,y,z]
 
     clips the mesh into triangles that are visible to the camera
     """
 
-    clipped_mesh = np.empty((0, 3, 4))
+    clipped_mesh = np.empty((0, 3, 3))
 
     # simply normal dot camera will not work since we didn't take fov into account
     # and also will not work for camera not at origin.
@@ -410,7 +405,7 @@ def clip(mesh,
 
     for idx in range(0, len(mesh)):
         center_coords = np.sum(mesh[idx], axis=0) / 3
-        if normal_array[idx].dot((center_coords - camera_posvec)[:3]) < 0:
+        if normal_array[idx].dot((center_coords - camera_posvec)) < 0:
             num_add += 1
             clipped_mesh = np.vstack((clipped_mesh, [mesh[idx]]))
 
@@ -444,19 +439,19 @@ def rotation_animation(mesh, frame, frame_idx, fps=30):
     of it rotating on all 3 axis in different rates 
     """
 
-    result_mesh = np.   copy(mesh)
+    result_mesh = np.copy(mesh)
 
     # rotate the mesh
     # calculate the angle based on frame
-    x_rad = frame_idx / fps * 0.4 * np.pi
-    y_rad = frame_idx / fps * 0.3 * np.pi
-    z_rad = 0
+    x_rad = y_rad = z_rad = 0
+    y_rad = frame_idx / fps * 0.4 * np.pi
+    # x_rad = frame_idx / fps * 0.3 * np.pi
     # z_rad = frame / fps * 0.8 * np.pi
-    # z_rad = frame / 100 * 2 * np.pi
-    result_mesh = rotate_mesh(result_mesh, x_rad, y_rad, z_rad)
+    result_mesh = apply_operation_to_mesh(
+        result_mesh, rotate_vec, x_rad, y_rad, z_rad)
 
     # distance it away from screen
-    result_mesh[..., 2] += 20
+    result_mesh[..., 2] += 2
 
     # calculate the normal of the mesh and clip it
     normal_arr = calculate_normal(result_mesh)
@@ -465,16 +460,20 @@ def rotation_animation(mesh, frame, frame_idx, fps=30):
 
     # calculate the color depth of the mesh
     color_depth_arr = illuminating(calculate_normal(
-        result_mesh), np.array([0, -1, 0]))
+        result_mesh), np.array([0, 1, 0]))
 
-    # project onto 2d space
-    projected_result_mesh = project_onto_screen(
-        result_mesh, screenWidth, screenHeight)
+    # do the projection
+    result_mesh = apply_operation_to_mesh(
+        result_mesh, project2viewCone_vec, aspectRatio, fov, far, near)
+    result_mesh = apply_operation_to_mesh(
+        result_mesh, project2screen_vec, screenHeight, screenWidth)
+
+    result_mesh = result_mesh[..., :-1]
 
     # draws on screen
-    for i in range(len(projected_result_mesh)):
+    for i in range(len(result_mesh)):
         frame = draw_triangle_filled(frame,
-                                     projected_result_mesh[i],
+                                     result_mesh[i],
                                      colorDepth=color_depth_arr[i])
         # frame = draw_triangle_frame(frame,
         #                                    projected_result_mesh[i],
@@ -489,47 +488,10 @@ def rotation_animation(mesh, frame, frame_idx, fps=30):
 
 
 def main():
-    origin_mesh = load_obj("test/teapot.obj")
-    print(origin_mesh.shape)
-
-    ## -------- Multithread Rendering Test -------- ##
-
-    # frame_buffer = []
-
-    # time1 = time.time()
-    # with cf.ThreadPoolExecutor(max_workers=8) as executor:
-    #     # Submit the tasks to the executor
-    #     futures = [executor.submit(
-    #         rotation_animation, origin_mesh, frame, i) for i in range(10)]
-
-    #     # Wait for all tasks to complete
-    #     cf.wait(futures)
-
-    #     # Retrieve the results from completed tasks
-    #     frame_buffer = [future.result() for future in futures]
-
-    # time2 = time.time()
-
-    # print(time2 - time1)
-
-    # animate_by_opencv(lambda x: frame_buffer[x], range(0, 100), 20)
-
-    # time3 = time.time()
-    # print(time3-time2)
-
-    ## -------- Single Threaad Rendering -------- ##
-
+    origin_mesh = load_obj("test/axis.obj")
     animate_by_opencv(lambda x: rotation_animation(
         origin_mesh, frame, x, fps=30), range(1, 500), 30)
 
 
 if __name__ == "__main__":
     exit(main())
-
-
-"""
-# TODO:
-1. Submit the Chem Lab, read email and complete phys lab
-3. Profiler and read the fucking books
-5. Phycs Reading
-"""
