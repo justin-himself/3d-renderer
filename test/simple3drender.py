@@ -2,21 +2,14 @@ import concurrent.futures as cf
 import numpy as np
 from numpy import cos as c, sin as s
 import cv2
+import time
+from vector_ops import *
+from screen_ops import *
+from constants import *
 
 # animate_by_maplotlib(lambda x: np.random.random((200, 300)), range(1, 100), 30)
-screenHeight = 480
-screenWidth = 720
-aspectRatio = screenHeight / screenWidth
-fov = 90.0 / 360 * 2 * np.pi
-far = 1000
-near = 1
 
-# THREAD_NUMBER = min(32, os.cpu_count() + 4)
-# # max number of frames to be buffered
-# FRAME_BUFFER_SIZE = 1024
-
-frame = np.zeros((screenHeight, screenWidth))
-# frame_buffer = np.zeros((0, screenHeight, screenWidth))
+frame = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH))
 
 
 def load_obj(file_path):
@@ -69,7 +62,7 @@ def load_obj(file_path):
 
     # scale down the mesh
     scale_factor = 1 / np.max(get_bounding_box(mesh))
-    mesh = apply_operation_to_mesh(mesh, enlarge_vec, scale_factor)
+    mesh = apply_vecops_to_mesh(mesh, enlarge_vec, scale_factor)
 
     # coordinate of obj: z pointing up, x to right,  y to in scree
     # coordinate of program: z points in screen, x to right, y to up
@@ -88,18 +81,6 @@ def get_bounding_box(mesh):
             y_max = max(y_max, vertex[1])
             z_max = max(z_max, vertex[2])
     return [x_max, y_max, z_max]
-
-
-# test_nd_array = np.array([
-#     [[1, 2, 3, 4],
-#      [1, 2, 3, 4],
-#      [1, 2, 3, 4]],
-#     [[1, 2, 3, 4],
-#      [1, 2, 3, 4],
-#      [1, 2, 3, 4]]
-# ])
-
-# print(test_nd_array)
 
 
 # def animate_by_matplotlib(
@@ -122,13 +103,16 @@ def get_bounding_box(mesh):
 #     # The above code is too slow,
 #     # so I will use matplotlib provided animation function
 
-def animate_by_opencv(image_frame_func, frames_index_array, fps=30):
+def animate_by_opencv(image_frame_func, frames_index_array, fps=30, timing=False):
 
     # get the size of first frame to determine the size of the window
     height, width = image_frame_func(frames_index_array[0]).shape
     cv2.namedWindow('image', cv2.WINDOW_NORMAL)
 
     for frame_idx in frames_index_array:
+
+        if timing:
+            t1 = time.time()
 
         pixel_matrix = image_frame_func(frame_idx)
         resized_pixel_matrix = cv2.resize(
@@ -137,228 +121,11 @@ def animate_by_opencv(image_frame_func, frames_index_array, fps=30):
         cv2.imshow("image", resized_pixel_matrix)
         key = cv2.waitKey(int(1000/fps))
 
+        if timing:
+            t2 = time.time()
+            print("frame: ", frame_idx, "time: ", t2 - t1)
+
     cv2.destroyAllWindows()
-
-
-def draw_line(srcBuf, row1, col1, row2, col2, colorDepth=1):
-    """
-    draw a 2d line. Color all of the pixels on the line black
-    TODO: find a better way to draw lines
-    """
-
-    num_points = int(max(abs(col2 - col1), abs(row2 - row1))) + 1
-    r_values = np.linspace(int(row1), int(row2), num_points, dtype=int)
-    c_values = np.linspace(int(col1), int(col2), num_points, dtype=int)
-
-    newSrcBuf = np.copy(srcBuf)
-    newSrcBuf[r_values, c_values] = colorDepth
-    newSrcBuf[newSrcBuf < 0] = 0
-    newSrcBuf[newSrcBuf > 1] = 1
-
-    return newSrcBuf
-
-
-def draw_triangle_filled(srcBuf, triVertexs, colorDepth, colorDepth_func=None):
-    """
-    fills a face of triangle with the specified corlor
-    colorDepth func is a function that takes in the coords of the pixel
-        colorDepth_func(np.array[row],np.array[col]) -> np.array[colorDepth]
-
-    https://gabrielgambetta.com/computer-graphics-from-scratch/07-filled-triangles.html
-    """
-
-    def get_barycentric_coords(triVertexs, coords):
-        """
-        takes in a 2d triangle in format of [vertex_no][row, col]
-        and a list of 2d coords in format of [n][row, col]
-        returns the barycentric coords in format of w_row[n], w_col[n]
-
-        Thanks to Prof.McNeily for helping me figure out the math
-        """
-
-        v0 = triVertexs[1] - triVertexs[0]
-        v1 = triVertexs[2] - triVertexs[0]
-        u0 = normalize(v0)
-        u1 = normalize(v1)
-
-        # \because   w = (a,b), u1 = (x1,y1), u2 = (x2,y2)
-        #            w = w1 + w2 = d1u1 + d2u2
-        # \therefore    (a,b) = d1(x1,y1) + d2(x2,y2)
-        # \therefore    a = d1x1 + d2x2
-        #               b = d1y1 + d2y2
-        # \therefore    [a,b] = [[x1,x2],[y1,y2]] [d1,d2]
-        # \therefore    [d1,d2] = [[x1,x2],[y1,y2]]^-1 [a,b]
-        w = coords - triVertexs[0]
-        mat = np.array([[u0[0], u1[0]], [u0[1], u1[1]]])
-        d0d1 = np.linalg.inv(mat) @ w.T
-        w0 = d0d1[0].reshape(-1, 1) / np.linalg.norm(v0)
-        w1 = d0d1[1].reshape(-1, 1) / np.linalg.norm(v1)
-        return w0.T.ravel(), w1.T.ravel()
-
-    if colorDepth_func is None:
-        colorDepth_func = \
-            lambda rows, cols: np.array(
-                [colorDepth] * max(len(rows), len(cols)))
-
-    # get the coords
-    min_row = int(np.min(triVertexs[..., 0]))
-    max_row = int(np.max(triVertexs[..., 0]))
-    min_col = int(np.min(triVertexs[..., 1]))
-    max_col = int(np.max(triVertexs[..., 1]))
-
-    # TODO: this is a temporary fix for drawing out of bound
-    min_row = np.maximum(min_row, 0)
-    max_row = np.minimum(max_row, srcBuf.shape[0] - 1)
-    min_col = np.maximum(min_col, 0)
-    max_col = np.minimum(max_col, srcBuf.shape[1] - 1)
-
-    row_coords = np.arange(min_row, max_row + 1)
-    col_coords = np.arange(min_col, max_col + 1)
-
-    rows, cols = np.meshgrid(row_coords, col_coords)
-    coords_arr = np.vstack((rows.ravel(), cols.ravel())).T
-
-    # calculate a mask for the triangle
-    try:
-        w_row, w_col = get_barycentric_coords(triVertexs, coords_arr)
-    except np.linalg.LinAlgError:
-        """
-        TODO: 
-            When x1 x2 x3 or y1 y2 y3 line up, the area of triangle equals zero
-            and calulating inverse of the matrix will give a LinAlgError.
-            Add something to detect the situation and simply draw a line.
-        """
-
-        return srcBuf
-
-    mask = coords_arr[(w_row >= 0) & (w_col >= 0) & (w_row + w_col <= 1)]
-    mask_rows = mask[..., 0]
-    mask_cols = mask[..., 1]
-
-    # shading the mask
-    colorDepth_arr = colorDepth_func(mask_rows, mask_cols)
-    newSrcBuf = np.copy(srcBuf)
-    newSrcBuf[mask_rows, mask_cols] = colorDepth_arr
-
-    return newSrcBuf
-
-
-def draw_triangle_frame(srcBuf, triVertexs, colorDepth=1):
-    """
-    takes in the screen buffer (2d ndarry),
-    and a matrix[vertex_no][row, col]
-
-    draws the triangle on the screenwith lines interconnecting it
-    """
-
-    newSrcBuf = srcBuf
-    newSrcBuf = draw_line(
-        newSrcBuf, triVertexs[0, 0], triVertexs[0, 1], triVertexs[1, 0], triVertexs[1, 1], colorDepth)
-    newSrcBuf = draw_line(
-        newSrcBuf, triVertexs[0, 0], triVertexs[0, 1], triVertexs[2, 0], triVertexs[2, 1], colorDepth)
-    newSrcBuf = draw_line(
-        newSrcBuf, triVertexs[1, 0], triVertexs[1, 1], triVertexs[2, 0], triVertexs[2, 1], colorDepth)
-    return newSrcBuf
-
-
-def enlarge_vec(vec, factor):
-    """
-    resize a vector by a scale factor
-    """
-
-    return vec * factor
-
-
-def apply_operation_to_mesh(mesh, operation_func, *args, **kwargs):
-    """
-    Apply a vector operation function to each vector in the mesh.
-
-    Parameters:
-    - mesh: 3D mesh as a NumPy array
-    - operation_func: Function to apply to each vector in the mesh
-    - *args, **kwargs: Additional arguments to pass to the operation function
-
-    Returns:
-    - Resulting mesh after applying the operation
-    """
-    result_mesh = np.zeros_like(mesh)
-    for i in range(len(mesh)):
-        for j in range(3):
-            result_mesh[i, j] = operation_func(mesh[i, j], *args, **kwargs)
-
-    return result_mesh
-
-
-def rotate_vec(vec, x, y, z):
-    """
-    x y z means angle of rotation around around x y z axis in rad
-
-    rotate a 3d vector, [x,y,z]]
-    around a given axis, anticlockewise, for given degrees
-
-    for example.
-    rotate(vec, 0, 1/2 * np.pi, 0) rotates the vector around y axis
-        anticlockwise for 90 degrees
-
-    https://faculty.sites.iastate.edu/jia/files/inline-files/homogeneous-transform.pdf
-    """
-
-    # rotate_x_matrix = np.array(
-    #     [[1, 0, 0, 0],
-    #      [0, c(x), -s(x), 0],
-    #      [0, s(x), c(x), 0],
-    #      [0, 0, 0, 1]]
-    # )
-
-    # rotate_y_matrix = np.array(
-    #     [[c(y), 0, s(y), 0],
-    #      [0, 1, 0, 0],
-    #      [-s(y), 0, c(y), 0],
-    #      [0, 0, 0, 1]]
-    # )
-
-    # rotate_z_matrix = np.array(
-    #     [[c(z), -s(z), 0, 0],
-    #      [s(z), c(z), 0, 0],
-    #      [0, 0, 1, 0],
-    #      [0, 0, 0, 1]]
-    # )
-
-    # rotation_matrix = rotate_z_matrix @ rotate_y_matrix @ rotate_x_matrix
-
-    rotation_matrix = np.array(
-        [[c(y)*c(z), c(z)*s(x)*s(y) - c(x)*s(z), s(x)*s(z) + c(x)*c(z)*s(y)],
-         [c(y)*s(z), c(x)*c(z) + s(x)*s(y) * s(z), c(x)*s(y)*s(z) - c(z)*s(x)],
-         [-s(y), c(y)*s(x), c(x)*c(y)]]
-    )
-    return rotation_matrix @ vec
-
-
-def project2viewCone_vec(vec, aspectRatio, fov, far, near):
-
-    projection_matrix = np.array(
-        [[aspectRatio * 1/np.tan(fov/2), 0, 0, 0],
-         [0, 1/np.tan(fov/2), 0, 0],
-         [0, 0, far/(far - near), 1],
-         [0, 0, -near * far/(far - near), 0]]
-    )
-
-    # make vec homegenous
-    vec = np.hstack((vec, np.ones(1)))
-
-    vec = vec @ projection_matrix
-    vec = vec[:3] / vec[3]
-    return vec
-
-
-def project2screen_vec(vec, scrHeight, scrWidth):
-    """
-    This function takes a 3d vector of form [x,y,z] and make it 
-    become [row, col, z], where z is not changed.
-    """
-    col = int((vec[0] + 1) / 2 * scrWidth)
-    row = int((1 - (vec[1] + 1) / 2) * scrHeight)
-    return np.array([row, col, vec[2]])
 
 
 def calculate_normal(mesh):
@@ -367,9 +134,9 @@ def calculate_normal(mesh):
     output an array of 3d vectors in dicating the normal of each face   
         in format of array[n][x,y,z]
     """
-
-    normal_array = np.zeros((len(mesh), 3))
-    for idx in range(0, len(mesh)):
+    l = np.shape(mesh)[0]
+    normal_array = np.zeros((l, 3))
+    for idx in range(0, l):
         normal_array[idx] = normalize(np.cross(
             mesh[idx][1] - mesh[idx][0],
             mesh[idx][2] - mesh[idx][0]
@@ -403,7 +170,8 @@ def clip(mesh,
 
     num_add = 0
 
-    for idx in range(0, len(mesh)):
+    l = np.shape(mesh)[0]
+    for idx in range(0, l):
         center_coords = np.sum(mesh[idx], axis=0) / 3
         if normal_array[idx].dot((center_coords - camera_posvec)) < 0:
             num_add += 1
@@ -423,16 +191,6 @@ def illuminating(normal_arr, light_vec=np.array([0, -1, 0])):
     return np.clip(normal_arr.dot(light_vec) + 0.5, 0, 1)
 
 
-# normalise
-def normalize(vec):
-    norm = np.linalg.norm(vec)
-    if norm == 0:
-        return vec
-    return vec / norm
-
-# animate
-
-
 def rotation_animation(mesh, frame, frame_idx, fps=30):
     """
     takes a mesh objected, and output the screen projection 
@@ -445,13 +203,13 @@ def rotation_animation(mesh, frame, frame_idx, fps=30):
     # calculate the angle based on frame
     x_rad = y_rad = z_rad = 0
     y_rad = frame_idx / fps * 0.4 * np.pi
-    # x_rad = frame_idx / fps * 0.3 * np.pi
+    x_rad = frame_idx / fps * 0.3 * np.pi
     # z_rad = frame / fps * 0.8 * np.pi
-    result_mesh = apply_operation_to_mesh(
+    result_mesh = apply_vecops_to_mesh(
         result_mesh, rotate_vec, x_rad, y_rad, z_rad)
 
     # distance it away from screen
-    result_mesh[..., 2] += 2
+    result_mesh[..., 2] += 1.5
 
     # calculate the normal of the mesh and clip it
     normal_arr = calculate_normal(result_mesh)
@@ -463,34 +221,26 @@ def rotation_animation(mesh, frame, frame_idx, fps=30):
         result_mesh), np.array([0, 1, 0]))
 
     # do the projection
-    result_mesh = apply_operation_to_mesh(
-        result_mesh, project2viewCone_vec, aspectRatio, fov, far, near)
-    result_mesh = apply_operation_to_mesh(
-        result_mesh, project2screen_vec, screenHeight, screenWidth)
+    result_mesh = apply_vecops_to_mesh(
+        result_mesh, project2viewCone_vec, ASPECT_RATIO, FOV, FAR, NEAR)
+    result_mesh = apply_vecops_to_mesh(
+        result_mesh, project2screen_vec, SCREEN_HEIGHT, SCREEN_WIDTH)
 
-    result_mesh = result_mesh[..., :-1]
+    def draw_frame(frame, projected_mesh, color_depth_arr):
+        depthBuffer = np.ones((SCREEN_HEIGHT, SCREEN_WIDTH)) * 1e7
+        for i in range(len(projected_mesh)):
+            frame = draw_triangle(frame, projected_mesh[i], depthBuffer,
+                                  draw_triangle_filled, colorDepth=color_depth_arr[i])
+        return frame
 
-    # draws on screen
-    for i in range(len(result_mesh)):
-        frame = draw_triangle_filled(frame,
-                                     result_mesh[i],
-                                     colorDepth=color_depth_arr[i])
-        # frame = draw_triangle_frame(frame,
-        #                                    projected_result_mesh[i],
-        #                                    colorDepth=color_depth_arr[i])
-
-        # TODO:
-        # Draw twice here because the side of triangle will gitch
-        # Fix the glitch.
-        # Adding the line heavily reduces the performance.Fix ASAP!
-
+    frame = draw_frame(frame, result_mesh, color_depth_arr)
     return frame
 
 
 def main():
-    origin_mesh = load_obj("test/axis.obj")
+    origin_mesh = load_obj("test/teapot.obj")
     animate_by_opencv(lambda x: rotation_animation(
-        origin_mesh, frame, x, fps=30), range(1, 500), 30)
+        origin_mesh, frame, x, fps=30), range(1, 500), 30, timing=True)
 
 
 if __name__ == "__main__":

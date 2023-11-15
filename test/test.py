@@ -1,7 +1,10 @@
 import numpy as np
-a = np.array([[1, 2], [3, 4]])
-a = np.array([[1, 2], [3, 4]])
-b = np.array([[4, 5, 6], [7, 8, 9]])
-c = np.hstack((a, b))
 
-print(c)
+
+# Example usage with the provided coordinates
+triangle_vertices = np.array([[146., 362.],
+                              [133., 364.],
+                              [148., 364.]])
+
+centroid = centroid_of_triangle(triangle_vertices)
+print("Centroid of the triangle:", centroid)
