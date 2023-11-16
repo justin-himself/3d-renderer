@@ -96,6 +96,8 @@ def project2viewCone_vec(vec, aspectRatio, fov, far, near):
     vec = vec[:3] / vec[3]
     return vec
 
+# def inverseCam_vec(vec):
+
 
 def apply_vecops_to_mesh(mesh, operation_func, *args, **kwargs):
     """

@@ -2,7 +2,7 @@ import cProfile
 import pstats
 import csv
 import io
-from simple3drender import *
+from test.main import *
 
 
 pr = cProfile.Profile()
