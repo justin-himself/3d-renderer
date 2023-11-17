@@ -45,11 +45,7 @@ def load_objfile(file_path):
             poly_coords.append([float(c)
                                for c in coords_line.split(" ")[1:]])
 
-        # reduce polygon into triangles
-        tri_coords = []
-        for v_idx in range(1, len(poly_coords) - 1):
-            tri_coords.append(
-                [poly_coords[0], poly_coords[v_idx], poly_coords[v_idx + 1]])
+        tri_coords = polygon_to_triangles(np.array(poly_coords))
 
         try:
             mesh = np.vstack((mesh, tri_coords))

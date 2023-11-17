@@ -8,6 +8,42 @@ def normalize(vec):
     return vec / norm
 
 
+def polygon_to_triangles(polyCoords: np.ndarray):
+
+    # reduce polygon into triangles
+    triCoords = []
+    for v_idx in range(1, np.shape(polyCoords)[0] - 1):
+        triCoords.append(
+            [polyCoords[0], polyCoords[v_idx], polyCoords[v_idx + 1]])
+    return np.array(triCoords)
+
+
+def line_plane_intersect(vec1, vec2, planePoint, planeNormal):
+    """
+    vec1, vec2: 3d vectors
+    planeP: 3d vector, a point on the plane
+    planeNormal: 3d vector, the normal of the plane
+    """
+    # https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
+    d = planeNormal.dot(planePoint)
+    t = (d - planeNormal.dot(vec1)) / planeNormal.dot(vec2 - vec1)
+
+    intersect = vec1 + t * (vec2 - vec1)
+    # if np.isnan(intersect).any():
+    #     print(vec1, vec2, planeP, planeNormal, d, t, intersect)
+    #     return None
+    return intersect
+
+
+def is_point_in_plane(vec, planePoint, planeNormal):
+    """
+    if a point is on the side of the plane that the normal is pointing to
+    then the point is considered outside of the plane
+    """
+
+    return planeNormal.dot(vec - planePoint) < 0
+
+
 def centroid_of_triangle(vertices):
     # Extract x and y coordinates of vertices
     x_coords, y_coords = vertices[:, 0], vertices[:, 1]

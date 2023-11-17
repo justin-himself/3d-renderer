@@ -1,5 +1,5 @@
 import numpy as np
-from maths_ops import *
+from maths_utils import *
 
 
 def draw_triangle(scrBuf, triVertexs, depthBuffer, draw_func, *args, **kwargs):
@@ -53,6 +53,7 @@ def draw_triangle_filled(scrBuf, triVertexs, colorDepth=1):
     """
 
     def fillBottomFlatTriangle(v1, v2, v3):
+
         invslope1 = (v2[1]-v1[1]) / (v2[0]-v1[0])
         invslope2 = (v3[1]-v1[1]) / (v3[0]-v1[0])
 
@@ -60,7 +61,7 @@ def draw_triangle_filled(scrBuf, triVertexs, colorDepth=1):
         curcol2 = v1[1]
 
         minRow = np.floor(v1[0]).astype(int)
-        maxRow = np.floor(v2[0]).astype(int)
+        maxRow = np.ceil(v2[0]).astype(int)
 
         for scanlineY in range(minRow, maxRow+1):
             draw_line(scrBuf, scanlineY, int(curcol1),
@@ -76,7 +77,7 @@ def draw_triangle_filled(scrBuf, triVertexs, colorDepth=1):
         curcol2 = v3[1]
 
         minRow = np.floor(v1[0]).astype(int)
-        maxRow = np.floor(v3[0]).astype(int)
+        maxRow = np.ceil(v3[0]).astype(int)
         for scanlineY in range(maxRow, minRow-1, -1):
             draw_line(scrBuf, scanlineY, int(curcol1),
                       scanlineY, int(curcol2), colorDepth)

@@ -12,6 +12,8 @@
 - Using Numpy built in functions, instead of python loops
 - deleted most of np.copy method to reduce memory io delay
 
+- Todo: remove all np.copy and make them views instead
+
 # 3D Specific 
 
 - use clipping

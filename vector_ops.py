@@ -1,6 +1,7 @@
 import numpy as np
 from joblib import Parallel, delayed
-from constants import *
+from variables import *
+from maths_utils import *
 
 
 def enlarge_vec(vec, factor):
@@ -67,13 +68,43 @@ def rotate_vec(vec, x, y, z):
     return rotation_matrix @ vec
 
 
+def viewFromCamera_vec(vec, cameraPosVec, cameraUpVec, cameraDirectionVec):
+    """
+    https://www.youtube.com/watch?v=HXSuNxpCzdM&t=1567s
+    """
+
+    va = normalize(vec - cameraPosVec)
+    vc = normalize(cameraUpVec - (cameraUpVec @ va) * va)
+    vb = np.cross(vc, va)
+
+    # print(cameraPosVec)
+    newVec = np.hstack((vec, np.ones(1)))
+
+    view_matrix = np.array(
+        [
+            [vb[0], vb[1], vb[2], 0],
+            [vc[0], vc[1], vc[2], 0],
+            [va[0], va[1], va[2], 0],
+            [cameraPosVec[0], cameraPosVec[1], cameraPosVec[2], 1]
+        ]
+    )
+
+    view_matrix = np.linalg.inv(view_matrix)
+
+    newVec = view_matrix @  newVec
+
+    newVec = newVec[:3] / newVec[3]
+
+    return newVec
+
+
 def project2screen_vec(vec, scrHeight, scrWidth):
     """
     This function takes a 3d vector of form [x,y,z] and make it 
     become [row, col, z], where z is not changed.
     """
-    col = int((vec[0] + 1) / 2 * scrWidth)
-    row = int((1 - (vec[1] + 1) / 2) * scrHeight)
+    col = int((vec[0] + 1) / 2 * (scrWidth - 1))
+    row = int((1 - (vec[1] + 1) / 2) * (scrHeight - 1))
     return np.array([row, col, vec[2]])
 
 
