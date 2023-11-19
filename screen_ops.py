@@ -1,8 +1,8 @@
 import numpy as np
-from maths_utils import *
+from maths_utils import centroid_of_triangle, is_zero
 
 
-def draw_triangle(scrBuf, triVertexs, depthBuffer, draw_func, *args, **kwargs):
+def draw_triangle(scrBuf, triVertexs, depthBuffer, draw_func,  *args, **kwargs):
     """
     Apply a vector operation function to each vector in the mesh.
 
@@ -15,15 +15,14 @@ def draw_triangle(scrBuf, triVertexs, depthBuffer, draw_func, *args, **kwargs):
     - Resulting mesh after applying the operation
     """
 
-    avg_z = np.sum(triVertexs[..., 2]) / 3
+    avg_z = np.mean(triVertexs[..., 2])
     flat_triangle = triVertexs[..., :2]
     center = centroid_of_triangle(flat_triangle)
-    if depthBuffer[center[0], center[1]] < avg_z:
+    if avg_z > depthBuffer[center[0], center[1]]:
         return scrBuf
+    draw_triangle_filled(depthBuffer, flat_triangle, avg_z)
 
     draw_func(scrBuf, flat_triangle, *args, **kwargs)
-    depthBuffer[scrBuf > 0] = avg_z
-
     # draw_func(scrBuf, triVertexs[..., :2], *args, **kwargs)
 
 
@@ -37,9 +36,18 @@ def draw_line(scrBuf, row1, col1, row2, col2, colorDepth=1):
     r_values = np.linspace(int(row1), int(row2), num_points, dtype=int)
     c_values = np.linspace(int(col1), int(col2), num_points, dtype=int)
 
+    # fix: this fixes drawing out of bound
+    r_values = np.maximum(r_values, 0)
+    r_values = np.minimum(r_values, scrBuf.shape[0] - 1)
+    c_values = np.maximum(c_values, 0)
+    c_values = np.minimum(c_values, scrBuf.shape[1] - 1)
+
     scrBuf[r_values, c_values] = colorDepth
-    scrBuf[scrBuf < 0] = 0
-    scrBuf[scrBuf > 1] = 1
+
+    # comment out because z buffering also use this function 
+    # and the value of z is not limited to 0 and 1
+    # scrBuf[scrBuf < 0] = 0
+    # scrBuf[scrBuf > 1] = 1
 
 
 def draw_triangle_filled(scrBuf, triVertexs, colorDepth=1):
@@ -54,33 +62,71 @@ def draw_triangle_filled(scrBuf, triVertexs, colorDepth=1):
 
     def fillBottomFlatTriangle(v1, v2, v3):
 
-        invslope1 = (v2[1]-v1[1]) / (v2[0]-v1[0])
-        invslope2 = (v3[1]-v1[1]) / (v3[0]-v1[0])
+        dc1 = v2[1] - v1[1]
+        dr1 = v2[0] - v1[0]
+        dc2 = v3[1] - v1[1]
+        dr2 = v3[0] - v1[0]
+
+        if is_zero(dc1) and is_zero(dr1):
+            return draw_line(scrBuf, v1[0], v1[1], v3[0], v3[1], colorDepth)
+        if is_zero(dc2) and is_zero(dr2):
+            return draw_line(scrBuf, v1[0], v1[1], v2[0], v2[1], colorDepth)
+        if is_zero(dr1) and is_zero(dr2):
+            return draw_line(scrBuf, v1[0], v1[1], v2[0], v2[1], colorDepth)
+        if is_zero(dr1) or is_zero(dr2):
+            return fillTopFlatTriangle(v1, v2, v3)
+
+        # with warnings.catch_warnings():
+        #     warnings.filterwarnings("error")
+        # try:
+        invslope1 = dc1 / dr1
+        invslope2 = dc2 / dr2
+        # except RuntimeWarning as e:
+        #     print(v1, v2, v3)
+        #     exit(-1)
 
         curcol1 = v1[1]
         curcol2 = v1[1]
 
         minRow = np.floor(v1[0]).astype(int)
         maxRow = np.ceil(v2[0]).astype(int)
+        
 
         for scanlineY in range(minRow, maxRow+1):
             draw_line(scrBuf, scanlineY, int(curcol1),
-                      scanlineY, int(curcol2), colorDepth)
+                        scanlineY, int(curcol2), colorDepth)
+
             curcol1 += invslope1
             curcol2 += invslope2
 
+    
     def fillTopFlatTriangle(v1, v2, v3):
-        invslope1 = (v3[1]-v1[1]) / (v3[0]-v1[0])
-        invslope2 = (v3[1]-v2[1]) / (v3[0]-v2[0])
+
+        dc1 = v3[1] - v1[1]
+        dr1 = v3[0] - v1[0]
+        dc2 = v3[1] - v2[1]
+        dr2 = v3[0] - v2[0]
+
+        if is_zero(dc1) and is_zero(dr1):
+            return draw_line(scrBuf, v1[0], v1[1], v3[0], v3[1], colorDepth)
+        if is_zero(dc2) and is_zero(dr2):
+            return draw_line(scrBuf, v1[0], v1[1], v2[0], v2[1], colorDepth)
+        if is_zero(dr1) and is_zero(dr2):
+            return draw_line(scrBuf, v1[0], v1[1], v2[0], v2[1], colorDepth)
+        if is_zero(dr1) or is_zero(dr2):
+            return fillBottomFlatTriangle(v1, v2, v3)
+
+        invslope1 = dc1 / dr1
+        invslope2 = dc2 / dr2
 
         curcol1 = v3[1]
         curcol2 = v3[1]
 
         minRow = np.floor(v1[0]).astype(int)
         maxRow = np.ceil(v3[0]).astype(int)
-        for scanlineY in range(maxRow, minRow-1, -1):
+        for scanlineY in range(maxRow, minRow, -1):
             draw_line(scrBuf, scanlineY, int(curcol1),
-                      scanlineY, int(curcol2), colorDepth)
+                    scanlineY, int(curcol2), colorDepth)
             curcol1 -= invslope1
             curcol2 -= invslope2
 
@@ -94,6 +140,12 @@ def draw_triangle_filled(scrBuf, triVertexs, colorDepth=1):
     r2 = triVertexs[2][0]
     c2 = triVertexs[2][1]
 
+
+    # extreme situation: all three points are on same spot
+    if r0 == r1 and r1 == r2:
+        if c0 == c1 and c1 == c2:
+            return draw_line(scrBuf, r0, c0, r1, c1, colorDepth)
+    
     if r1 == r2:
         fillBottomFlatTriangle(triVertexs[0], triVertexs[1], triVertexs[2])
     elif r0 == r1:
@@ -104,6 +156,8 @@ def draw_triangle_filled(scrBuf, triVertexs, colorDepth=1):
         v4col = int(c0 + (c2-c0) / (r2-r0) * (r1-r0))
 
         v4 = np.array([v4row, v4col])
+
+
         fillBottomFlatTriangle(triVertexs[0], triVertexs[1], v4)
         fillTopFlatTriangle(triVertexs[1], v4, triVertexs[2])
 

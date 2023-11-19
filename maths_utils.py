@@ -7,6 +7,14 @@ def normalize(vec):
         return vec
     return vec / norm
 
+def is_zero(n:float):
+
+    """
+    come in handy for cases where n is really really small
+    (will cause really large number but not inf or nan)
+    """
+
+    return abs(n) < 1e-6
 
 def polygon_to_triangles(polyCoords: np.ndarray):
 

@@ -2,30 +2,22 @@
 
 > This project is licensed under the MIT LICENSE.
 
-## Optional 
+## Quick start 
 
-In minimum configuration the project only depened on python >=3.9 standard librarys and numpy, but adding the following libraries / configurations will greatly enhance the performance.
+The program only needs `numpy` and `matplotlib` to run, but the performance will be heavily limited.
 
-### OpenCV (Strongly Recommended)
-
-OpenCV gives way faster refresh rate than standard python console. Use the following command to install:
+To achieve best experience, install all the requirements by executing:
 
 ```bash
-pip3 install python-opencv
+pip install -r requirements.txt
 ```
 
-### NumPy accelerated with Apple Silicon Hardware
+To render a spinning toilet, use 
 
 ```bash
-conda create -n 3d_engine python=3.9 numpy "blas=*=*accelerate*"
-conda config --set pip_interop_enabled true
-conda activate 3d_engine
+python3 main.py models/toilet_1451.obj output
 ```
 
-### CuPy (Optional)
+A window will pop up so you can adjust the object's positon. Press enter when you are satisfied and the render will start.
 
-On machines with a NVIDIA GPU that supports CUDA 3.0 or higher, CuPy can act as a substitute of NumPy and provide up to 10x the compute speed and greatly enhance the performance, compared to the default method which calculates using CPU only.
-
-To install, follow the [installing instructions](https://docs.cupy.dev/en/stable/install.html) by CuPy.
-
-```
+The result will be saved as `output.gif`

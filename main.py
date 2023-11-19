@@ -1,149 +1,145 @@
-import concurrent.futures as cf
-import numpy as np
-from numpy import cos as c, sin as s
-import cv2
-import time
-from vector_ops import *
-from screen_ops import *
-from mesh_ops import *
-from obj_ops import *
-from variables import *
-from control_ops import *
-
-# animate_by_maplotlib(lambda x: np.random.random((200, 300)), range(1, 100), 30)
-s
-
-# def animate_by_matplotlib(
-#         image_frame_func,
-#         frames_index_array,
-#         frames_pers_second):
-
-#     import matplotlib.pyplot as plt
-#     import time
-
-#     plt.ion()
-#     figure, ax = plt.subplots()
-
-#     for frame_idx in frames_index_array:
-#         plt.imshow(image_frame_func(frame_idx), cmap='gray')
-#         figure.canvas.draw()
-#         figure.canvas.flush_events()
-#         time.sleep(1/frames_pers_second)
-
-#     # The above code is too slow,
-#     # so I will use matplotlib provided animation function
+import argparse
+from multiprocessing import cpu_count
+from obj_ops import load_objfile
+from output import preview_by_opencv, render_by_matplotlib, preview_by_matplotlib
+from animation import rotation_animation
+from usercontrol import ControlableVars
 
 
-def animate_by_opencv(image_frame_func, frames_index_array, fps=30, input_callback=None, timing=False):
+def env_validate(args):
 
-    # get the size of first frame to determine the size of the window
-    height, width = image_frame_func(frames_index_array[0]).shape
-    cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+    try:
+        import numpy
+        import matplotlib
+    except ImportError:
+        print("Numpy & Matplotlib not found, exiting")
+        exit(-1)
 
-    for frame_idx in frames_index_array:
+    if args.processors > 1:
+        try:
+            import joblib
+            import joblib_progress
+        except ImportError:
+            print(
+                f"--processors {args.processors}: joblib & joblib_progress not found, using single processor")
+            args.processors = 1
 
-        if timing:
-            t1 = time.time()
+    if args.preview_method == 'opencv':
+        try:
+            import cv2
+        except ImportError:
+            print("--preview-method opencv: opencv not found, fall back to matplotlib")
+            args.preview_method = 'matplotlib'
 
-        pixel_matrix = image_frame_func(frame_idx)
-        resized_pixel_matrix = cv2.resize(
-            pixel_matrix, (width*5, height*5), interpolation=cv2.INTER_NEAREST)
+    if args.output_format != 'gif':
+        try:
+            import ffmpeg
+        except ImportError:
+            print(
+                f"--output-format: {args.output_format}: FFMpeg not found, fall back to gif")
+            args.output_format = 'gif'
 
-        cv2.imshow("image", resized_pixel_matrix)
-        key = cv2.waitKey(int(1000/fps))
-        if input_callback is not None:
-            input_callback(key)
-
-        if timing:
-            t2 = time.time()
-            print("frame: ", frame_idx, "time: ", t2 - t1)
-
-    cv2.destroyAllWindows()
-
-
-# clip
-
-# # illuminating
-
-
-def illuminating(normal_arr, light_vec=np.array([0, -1, 0])):
-    """
-    take in an array of normal and a light vector indicating the direction of light
-    output an arrry of colordepth, corresponding to every triangle
-    """
-
-    return np.clip(normal_arr.dot(light_vec) + 0.5, 0, 1)
+    return args
 
 
-def rotation_animation(mesh, frame_idx, fps=30):
-    """
-    takes a mesh objected, and output the screen projection 
-    of it rotating on all 3 axis in different rates 
-    """
+def main(args):
 
-    frame = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH))
-    result_mesh = np.copy(mesh)
+    args = env_validate(args)
 
-    # rotate the mesh
-    x_rad = y_rad = z_rad = 0
-    x_rad = frame_idx / fps * 0.3 * np.pi
-    y_rad = frame_idx / fps * 0.4 * np.pi
-    # z_rad = frame_idx / fps * 0.8 * np.pi
-    result_mesh = apply_vecops_to_mesh(
-        result_mesh, rotate_vec, x_rad, y_rad, z_rad)
+    # receive the args
+    model_filepath = args.model
+    fps = args.fps
+    render_wireframe = args.render_wireframe
+    render_filled = args.render_filled
+    preview_method = args.preview_method
+    processors = args.processors
+    output_length = args.output_length
+    output_width = args.output_width
+    output_height = args.output_height
+    output_format = args.output_format
+    output_file = args.output_file
 
-    # scale it down and distant away
-    # result_mesh = apply_vecops_to_mesh(
-    #     result_mesh, enlarge_vec, 0.3)
-    result_mesh[..., 2] += 4
+    if preview_method == 'opencv':
+        preview_func = preview_by_opencv
+    elif preview_method == 'matplotlib':
+        preview_func = preview_by_matplotlib
+    elif preview_method == 'none':
+        preview_func = lambda *args, **kwargs: None
 
-    # # do camera transformation
-    # result_mesh = apply_vecops_to_mesh(
-    #     result_mesh, viewFromCamera_vec, controllable_vars["camera_pos_vec"],
-    #     controllable_vars["camera_up_vec"], controllable_vars["camera_direction_vec"])
+    origin_mesh = load_objfile(model_filepath)
+    controllable_vars = ControlableVars()
 
-    # project to view cone
-    result_mesh = apply_vecops_to_mesh(
-        result_mesh, project2viewCone_vec, ASPECT_RATIO, FOV, FAR, NEAR)
-
-    # print(result_mesh)
-    # illuminating
-    illumanceArr = illuminating(calculate_normal(
-        result_mesh), np.array([0, 1, 0]))
-
-    # do normal clipping
-    result_mesh = normal_clip(result_mesh, normal_array=calculate_normal(result_mesh),
-                              cameraDir_vec=controllable_vars["camera_direction_vec"])
-
-    # project to 2d screen
-    result_mesh = apply_vecops_to_mesh(
-        result_mesh, project2screen_vec, SCREEN_HEIGHT, SCREEN_WIDTH)
-
-    # clip all the triangles against the screen edge
-    result_mesh = clip_against_screen_edge(
-        result_mesh, SCREEN_HEIGHT, SCREEN_WIDTH)
-
-    def draw_frame(frame, projected_mesh, color_depth_arr):
-        depthBuffer = np.ones((SCREEN_HEIGHT, SCREEN_WIDTH)) * 1e7
-        for i in range(len(projected_mesh)):
-            draw_triangle(frame, projected_mesh[i], depthBuffer,
-                          draw_triangle_filled, colorDepth=color_depth_arr[i])
-            # draw_triangle(frame, projected_mesh[i], depthBuffer,
-            #               draw_triangle_wireframe, colorDepth=1)
-            # draw_triangle(frame, projected_mesh[i], depthBuffer,
-            #               draw_triangle_filled, colorDepth=1)
-    draw_frame(frame, result_mesh, illumanceArr)
-    return frame
-
-
-def main():
-    origin_mesh = load_objfile("models/cube_6.obj")
-    # origin_mesh = load_objfile("models/rectgrid_16.obj")
-    # origin_mesh = load_objfile("models/teapot_158.obj")
-    # origin_mesh = load_objfile("models/axis_140.obj")
-    animate_by_opencv(lambda x: rotation_animation(
-        origin_mesh, x, fps=30), range(1, 500), 30, input_callback=user_control, timing=False)
+    preview_func(
+        lambda x: rotation_animation(
+            origin_mesh,
+            x,
+            controllable_vars,
+            draw_filled=render_filled,
+            draw_wireframe=render_wireframe,
+            screen_width=50,
+            screen_height=50,
+            do_normal_clip=True),
+        controllable_vars,
+        fps=5
+    )
+    render_by_matplotlib(
+        lambda x: rotation_animation(
+            origin_mesh,
+            x,
+            controllable_vars,
+            draw_wireframe=render_wireframe,
+            draw_filled=render_filled,
+            screen_width=output_width,
+            screen_height=output_height,
+            do_normal_clip=True,
+        ),
+        video_length=output_length,
+        fps=fps,
+        processes=processors,
+        output_video_name=output_file,
+        output_format=output_format)
 
 
 if __name__ == "__main__":
-    exit(main())
+
+    parser = argparse.ArgumentParser(
+        description='3D Model Rendering Script written by Justin')
+
+    parser.add_argument('model', metavar='model_file',
+                        help='Wavefront OBJ file to be rendered')
+
+    parser.add_argument('output_file', help='Output file name')
+
+    # Required arguments
+    parser.add_argument('--output-length', type=int, default=1,
+                        help='Output video length in seconds.')
+
+    parser.add_argument('--fps', type=int, default=30,
+                        help='Frames per second for the video')
+
+    # select one
+    render_group = parser.add_mutually_exclusive_group(required=False)
+    render_group.add_argument('--render-wireframe', action='store_true',
+                              help='Render the model in wireframe mode')
+
+    render_group.add_argument('--render-filled', action='store_true', default=True,
+                              help='Render the model in filled mode')
+
+    # Optional arguments
+    parser.add_argument('--preview-method', choices=['opencv', 'matplotlib', 'none'], default='opencv',
+                        help='Select the method for preview and render (default: opencv)')
+    parser.add_argument('--output-format', default='gif',
+                        help='Select the render result format (default: gif)')
+
+    parser.add_argument('--processors', type=int, default=cpu_count(),
+                        help='Number of processors used to render the video, requires joblib to work (default: CPU count)')
+
+    parser.add_argument('--output-width', type=int, default=100,
+                        help='Width of the output video (default: 100)')
+
+    parser.add_argument('--output-height', type=int, default=100,
+                        help='Height of the output video (default: 100)')
+
+    args = parser.parse_args()
+
+    main(args)

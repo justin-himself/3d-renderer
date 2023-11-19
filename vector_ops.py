@@ -1,7 +1,6 @@
 import numpy as np
-from joblib import Parallel, delayed
-from variables import *
-from maths_utils import *
+import variables
+from maths_utils import normalize
 
 
 def enlarge_vec(vec, factor):
@@ -143,12 +142,25 @@ def apply_vecops_to_mesh(mesh, operation_func, *args, **kwargs):
     - Resulting mesh after applying the operation
     """
 
-    def parallel_operation(i, mesh, operation_func, args, kwargs):
-        result_row = np.zeros((3, 3))
+    result_mesh = np.zeros((np.shape(mesh)[0], 3, 3))
+    for i in range(np.shape(mesh)[0]):
         for j in range(3):
-            result_row[j] = operation_func(mesh[i, j], *args, **kwargs)
-        return result_row
+            result_mesh[i, j] = operation_func(mesh[i, j], *args, **kwargs)
+    return result_mesh
 
-    result_mesh = Parallel(n_jobs=PARALLEL_CORES)(delayed(parallel_operation)
-                                                  (i, mesh, operation_func, args, kwargs) for i in range(np.shape(mesh)[0]))
-    return np.array(result_mesh)
+
+# def apply_vecops_to_mesh_parallel(mesh, operation_func, *args, **kwargs):
+#     """
+#     Apply a vector operation function to each vector in the mesh.
+#     (use parallel processing)
+#     """
+
+#     def parallel_operation(i, mesh, operation_func, args, kwargs):
+#         result_row = np.zeros((3, 3))
+#         for j in range(3):
+#             result_row[j] = operation_func(mesh[i, j], *args, **kwargs)
+#         return result_row
+
+#     result_mesh = Parallel(n_jobs=PARALLEL_CORES)(delayed(parallel_operation)
+#                                                   (i, mesh, operation_func, args, kwargs) for i in range(np.shape(mesh)[0]))
+#     return np.array(result_mesh)

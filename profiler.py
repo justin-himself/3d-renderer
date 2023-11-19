@@ -2,7 +2,7 @@ import cProfile
 import pstats
 import csv
 import io
-from test.main import *
+from main import *
 
 
 pr = cProfile.Profile()

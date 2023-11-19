@@ -1,5 +1,6 @@
 import numpy as np
-from maths_utils import *
+from maths_utils import normalize, is_point_in_plane, line_plane_intersect, polygon_to_triangles
+from vector_ops import rotate_vec
 
 
 def get_boundary_box(mesh):
@@ -29,13 +30,25 @@ def calculate_normal(mesh):
     return normal_array
 
 
+def illuminating(normal_arr, light_vec=np.array([0, -1, 0])):
+    """
+    take in an array of normal and a light vector indicating the direction of light
+    output an arrry of colordepth, corresponding to every triangle
+    """
+
+    return np.clip(normal_arr.dot(light_vec) + 0.5, 0, 1)
+
+
 def normal_clip(mesh, normal_array, cameraDir_vec):
     """
     clips the mesh into triangles that are visible to the camera,
     acoording to the camera look direction
+
+    returns an index array of the visible triangles
     """
 
-    clipped_mesh = np.empty((0, 3, 3))
+    # clipped_mesh = np.empty((0, 3, 3))
+    clipped_mesh_idx = np.empty((0), dtype=int)
 
     # simply normal dot camera will not work since we didn't take fov into account
     # and also will not work for camera not at origin.
@@ -47,9 +60,10 @@ def normal_clip(mesh, normal_array, cameraDir_vec):
         center_coords = np.sum(mesh[idx], axis=0) / 3
         if normal_array[idx].dot((cameraDir_vec)) < 0:
             num_add += 1
-            clipped_mesh = np.vstack((clipped_mesh, [mesh[idx]]))
+            # clipped_mesh = np.vstack((clipped_mesh, [mesh[idx]]))
+            clipped_mesh_idx = np.append(clipped_mesh_idx, idx)
 
-    return clipped_mesh
+    return clipped_mesh_idx
 
 
 def triangle_plane_clip(triVertexs, planePoint, planeNormal):
@@ -96,29 +110,62 @@ def triangle_plane_clip(triVertexs, planePoint, planeNormal):
     return polygon_to_triangles(np.array(polygon_vextexs))
 
 
-def mesh_plane_clip(mesh, planePoint, planeNormal):
+def mesh_plane_clip(mesh, planePoint, planeNormal, illuminanceArr=None):
     """
     clips a mesh against a plane
     returns a list of triangles
     """
     resultMesh = np.zeros((0, 3, 3))
-    for tri in mesh:
+    resultIluArr = np.zeros((0))
+
+    for idx, tri in enumerate(mesh):
         triList = triangle_plane_clip(tri, planePoint, planeNormal)
         resultMesh = np.vstack((resultMesh, triList))
+        if illuminanceArr is not None:
+            resultIluArr = np.append(
+                resultIluArr, np.full((len(triList)), illuminanceArr[idx]))
 
-    return resultMesh
+    return resultMesh, resultIluArr
 
 
-def clip_against_screen_edge(mesh, screenHeight, screenWidth):
-    mesh = mesh_plane_clip(mesh, np.array(
-        [screenHeight - 1, 0, 0]), np.array([1, 0, 0]))
-    mesh = mesh_plane_clip(mesh, np.array(
-        [0, 0, 0]), np.array([-1, 0, 0]))
-    mesh = mesh_plane_clip(mesh, np.array(
-        [0, screenWidth - 1, 0]), np.array([0, 1, 0]))
-    mesh = mesh_plane_clip(mesh, np.array(
-        [0, 0, 0]), np.array([0, -1, 0]))
+def clip_against_screen_edge(mesh, screenHeight, screenWidth, illuminanceArr=None):
+    iluArr = illuminanceArr
+    mesh, iluArr = mesh_plane_clip(mesh, np.array(
+        [screenHeight - 1, 0, 0]), np.array([1, 0, 0]), iluArr)
+    mesh, iluArr = mesh_plane_clip(mesh, np.array(
+        [0, 0, 0]), np.array([-1, 0, 0]), iluArr)
+    mesh, iluArr = mesh_plane_clip(mesh, np.array(
+        [0, screenWidth - 1, 0]), np.array([0, 1, 0]), iluArr)
+    mesh, iluArr = mesh_plane_clip(mesh, np.array(
+        [0, 0, 0]), np.array([0, -1, 0]), iluArr)
 
+    if illuminanceArr is None:
+        return mesh
+    return mesh, iluArr
+
+
+def clip_behind_camera(mesh, cameraPos_vec, cameraDir_vec):
+    """
+    clips a mesh against a plane
+    returns a list of triangles
+    """
+    return mesh_plane_clip(mesh, cameraPos_vec, -cameraDir_vec)
+
+
+def clip_outside_viewcone(mesh, cameraPos_vec, cameraUp_vec, fov):
+    # print(rotate_vec(
+    #     np.array([0, 0, 1]), 0, -variables.FOV/2, 0))
+    leftPlaneNormal = np.cross(rotate_vec(
+        np.array([0, 0, 1]), 0, -variables.FOV/2, 0), cameraUp_vec)
+    # print(leftPlaneNormal)
+    mesh = mesh_plane_clip(mesh, cameraPos_vec,
+                           leftPlaneNormal)
+    # mesh = mesh_plane_clip(mesh, cameraPos_vec,
+    #                        rightPlaneNormal)
+    # mesh = mesh_plane_clip(mesh, cameraPos_vec,
+    #                        topPlaneNormal)
+    # mesh = mesh_plane_clip(mesh, cameraPos_vec,
+    #                        bottomPlaneNormal)
     return mesh
 
 

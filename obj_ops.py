@@ -1,8 +1,8 @@
 import os
 import re
 import numpy as np
-from mesh_ops import *
-from vector_ops import *
+from mesh_ops import polygon_to_triangles, get_boundary_box
+from vector_ops import apply_vecops_to_mesh, enlarge_vec
 
 
 def load_objfile(file_path):
@@ -42,15 +42,25 @@ def load_objfile(file_path):
         poly_coords = []
         for v in vertexs:
             coords_line = obj_lines[v - 1 + vertex_line_start_idx]
-            poly_coords.append([float(c)
-                               for c in coords_line.split(" ")[1:]])
+            if "/" in coords_line:
+                continue
+            if coords_line[0] != "v":
+                continue
 
+            coords = [float(c) for c in coords_line.split(" ")[1:]]
+    
+            if len(coords) < 3:
+                continue
+            poly_coords.append(coords)
+        
+        if len(poly_coords) < 3:
+            continue
         tri_coords = polygon_to_triangles(np.array(poly_coords))
-
         try:
             mesh = np.vstack((mesh, tri_coords))
         except:
-            exit(0)
+            print(poly_coords)
+            exit(-1)
 
     # scale down the mesh
     scale_factor = 1 / np.max(get_boundary_box(mesh))
