@@ -6,6 +6,51 @@ from animation import rotation_animation
 from usercontrol import ControlableVars
 
 
+def is_spyder():
+    """
+    detect specifically if the script is running in Spyder
+    """
+
+    try:
+        # Check if 'get_ipython' function is defined
+        get_ipython
+        exec_lines = get_ipython().config['IPKernelApp']['exec_lines']
+        for line in exec_lines:
+            if 'spyder' in line:
+                return True
+        return False
+    except NameError:
+        return False
+
+
+def spyder_interactive_args_input():
+
+    def propmpt_input(prompt, default, type):
+        userinput = None
+        while userinput is None or type(userinput) != type:
+            userinput = input(prompt + f" (default: {default}): ")
+            if userinput.strip() == '':
+                return default
+
+    args = {}
+
+    # preview will not be availble since spider does not support user interaction
+    args['preview_method'] = "none"
+    args['processors'] = 1  # assume joblib not available in spyder
+    args['output_format'] = "gif"  # assume ffmpeg not available in spyder
+    args['output_width'] = 100
+    args['output_height'] = 100
+    args['output_length'] = 1
+
+    args['model_filepath'] = propmpt_input(
+        "Model file path", "models/teapot_158.obj", str)
+    args['fps'] = propmpt_input("FPS", 30, int)
+    args['output_style'] = propmpt_input("Output style", "filled", str)
+    args['output_file'] = propmpt_input("Output file name", "output", str)
+
+    return args
+
+
 def env_validate(args):
 
     try:
@@ -17,11 +62,10 @@ def env_validate(args):
 
     if args.processors > 1:
         try:
-            import joblib
             import joblib_progress
+            import joblib
         except ImportError:
-            print(
-                f"--processors {args.processors}: joblib & joblib_progress not found, using single processor")
+            print("--processors: joblib not found, fall back to single process")
             args.processors = 1
 
     if args.preview_method == 'opencv':
@@ -42,21 +86,18 @@ def env_validate(args):
     return args
 
 
-def main(args):
-
-    args = env_validate(args)
-
-    # receive the args
-    model_filepath = args.model
-    fps = args.fps
-    preview_method = args.preview_method
-    processors = args.processors
-    output_style = args.output_style
-    output_length = args.output_length
-    output_width = args.output_width
-    output_height = args.output_height
-    output_format = args.output_format
-    output_file = args.output_file
+def main(
+    model_filepath: str,
+    fps: int,
+    preview_method: str,
+    processors: int,
+    output_style: str,
+    output_length: int,
+    output_width: int,
+    output_height: int,
+    output_format: str,
+    output_file: str
+):
 
     if preview_method == 'opencv':
         preview_func = preview_by_opencv
@@ -89,7 +130,8 @@ def main(args):
             screen_height=50,
             do_normal_clip=True),
         controllable_vars,
-        fps=5
+        fps=5,
+        console_input=is_spyder,
     )
     render_by_matplotlib(
         lambda x: rotation_animation(
@@ -111,6 +153,14 @@ def main(args):
 
 if __name__ == "__main__":
 
+    if is_spyder():
+        print('''
+Warning: Running in Spyder, only basic rendering is supported, 
+and performance is heavily bottlenecked.''')
+        main(**spyder_interactive_args_input())
+        print("Render finished, please check the output file")
+        return
+
     parser = argparse.ArgumentParser(
         description='3D Model Rendering Script written by Justin')
 
@@ -128,7 +178,7 @@ if __name__ == "__main__":
 
     # Optional arguments
     parser.add_argument('--output-style', choices=['filled', 'wireframe', 'both'], default='filled',
-                              help='Render style')
+                        help='Render style')
     parser.add_argument('--preview-method', choices=['opencv', 'matplotlib', 'none'], default='opencv',
                         help='Select the method for preview and render (default: opencv)')
     parser.add_argument('--output-format', default='gif',
@@ -144,5 +194,16 @@ if __name__ == "__main__":
                         help='Height of the output video (default: 100)')
 
     args = parser.parse_args()
-
-    main(args)
+    args = env_validate(args)
+    main(
+        args.model,
+        args.fps,
+        args.preview_method,
+        args.processors,
+        args.output_style,
+        args.output_length,
+        args.output_width,
+        args.output_height,
+        args.output_format,
+        args.output_file
+    )

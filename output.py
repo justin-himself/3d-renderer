@@ -3,7 +3,6 @@ import sys
 from usercontrol import *
 from PIL import Image
 
-
 def basic_progress_bar(iterable,  prefix='', suffix='', length=40, fill='=', print_end='\r'):
     """
     Display a styled progress bar in the console.
@@ -25,7 +24,6 @@ def basic_progress_bar(iterable,  prefix='', suffix='', length=40, fill='=', pri
     sys.stdout.write('\n')
     sys.stdout.flush()
 
-
 def load_instructions():
 
     img = Image.open("instructions.png")
@@ -39,14 +37,9 @@ def preview_by_matplotlib(
         image_frame_func,
         controllable_vars,
         fps=30,
-        timing=False):
+        timing=False,
+        console_input = False):
 
-    import matplotlib.pyplot as plt
-    from matplotlib import rcParams
-
-    # overwrite the default keymap
-    rcParams['keymap.save'] = {}
-    rcParams['keymap.quit'] = {}
 
     def input_callback(key_press: str):
 
@@ -56,6 +49,13 @@ def preview_by_matplotlib(
         if key_press in user_control_keymap:
             user_control_keymap[key_press](controllable_vars)
 
+    import matplotlib.pyplot as plt
+    from matplotlib import rcParams
+
+    # overwrite the default keymap
+    rcParams['keymap.save'] = {}
+    rcParams['keymap.quit'] = {}
+
     plt.ion()
     figure, ax = plt.subplots()
 
@@ -64,13 +64,15 @@ def preview_by_matplotlib(
     ax.set_title('Press any key to continue')
     figure.canvas.draw()
     figure.canvas.flush_events()
+
     plt.waitforbuttonpress()
+
     ax.set_title('Press Enter to Exit')
 
     # draw figure
     figure.canvas.mpl_connect(
         'key_press_event', lambda event: input_callback(event.key))
-
+    
     frames_index_array = range(0, int(1e9))
 
     for frame_idx in frames_index_array:
@@ -94,7 +96,6 @@ def preview_by_opencv(
         controllable_vars,
         fps=30,
         timing=False):
-    import cv2
 
     def input_callback(key_press):
         if key_press == -1:
@@ -110,6 +111,8 @@ def preview_by_opencv(
 
         if key_press in user_control_keymap:
             user_control_keymap[key_press](controllable_vars)
+
+    import cv2
 
     # get the size of first frame to determine the size of the window
     frames_index_array = range(0, int(1e9))
@@ -162,8 +165,8 @@ def render_by_matplotlib(
     import matplotlib.animation as animation
 
     if processes > 1:
-        from joblib import Parallel, delayed
-        from joblib_progress import joblib_progress
+        from common.joblib.joblib import Parallel, delayed
+        from common.joblib_progress.joblib_progress import joblib_progress
 
     # to make the gif loop, make the video length interger multiple of 200
     number_of_frames = int(np.ceil(video_length * fps / 200) * 200)

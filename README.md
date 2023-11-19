@@ -5,13 +5,25 @@
 
 ## Quick start 
 
-The program only needs `numpy` and `matplotlib` to run, but the performance will be heavily limited.
+### Setup
 
-To achieve best experience, install all the requirements by executing:
+First, clone the project with all submodules
+
+```bash
+git clone --recursive https://github.com/justin-himself/3d-renderer.git
+```
+
+You only need to have `numpy` and `matplotlib` installed to run the program, but it is recommanded to install `opencv`, `joblib` and `joblib-progress` to achieve best performance. You will also need to install `ffmpeg` if you want the output to be any format other than `.gif`, though it's entirely optional.
+
+Simply execute the following command to install all requirements.
 
 ```bash
 pip install -r requirements.txt
 ```
+
+It is possible to run the program in Spyder but interactive preview, multicore rendering and custom output format are **NOT** supported, it's hugely recommended that you run the program directly in the console.
+
+### Render a Toilet
 
 To render a spinning toilet, use 
 

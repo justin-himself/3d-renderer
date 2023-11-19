@@ -20,7 +20,7 @@ def rotation_animation(
     """
 
     frame = np.zeros((screen_height, screen_width))
-    result_mesh = np.copy(mesh)
+    result_mesh = mesh
 
     # rotate the mesh
     x_rad = y_rad = z_rad = 0
