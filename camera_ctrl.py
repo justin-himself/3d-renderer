@@ -16,7 +16,7 @@ def get_cam_dir_forward(controllable_vars):
 
 def get_cam_dir_right(controllable_vars):
 
-    cam_dir_forward = get_cam_dir_forward()
+    cam_dir_forward = get_cam_dir_forward(controllable_vars)
     cam_dir_right = normalize(
         np.cross(controllable_vars.camera_up_vec, cam_dir_forward))
     return cam_dir_right

@@ -49,10 +49,9 @@ def main(args):
     # receive the args
     model_filepath = args.model
     fps = args.fps
-    render_wireframe = args.render_wireframe
-    render_filled = args.render_filled
     preview_method = args.preview_method
     processors = args.processors
+    output_style = args.output_style
     output_length = args.output_length
     output_width = args.output_width
     output_height = args.output_height
@@ -65,6 +64,16 @@ def main(args):
         preview_func = preview_by_matplotlib
     elif preview_method == 'none':
         preview_func = lambda *args, **kwargs: None
+
+    if output_style == 'filled':
+        render_filled = True
+        render_wireframe = False
+    elif output_style == 'wireframe':
+        render_filled = False
+        render_wireframe = True
+    elif output_style == 'both':
+        render_filled = True
+        render_wireframe = True
 
     origin_mesh = load_objfile(model_filepath)
     controllable_vars = ControlableVars()
@@ -117,15 +126,9 @@ if __name__ == "__main__":
     parser.add_argument('--fps', type=int, default=30,
                         help='Frames per second for the video')
 
-    # select one
-    render_group = parser.add_mutually_exclusive_group(required=False)
-    render_group.add_argument('--render-wireframe', action='store_true',
-                              help='Render the model in wireframe mode')
-
-    render_group.add_argument('--render-filled', action='store_true', default=True,
-                              help='Render the model in filled mode')
-
     # Optional arguments
+    parser.add_argument('--output-style', choices=['filled', 'wireframe', 'both'], default='filled',
+                              help='Render style')
     parser.add_argument('--preview-method', choices=['opencv', 'matplotlib', 'none'], default='opencv',
                         help='Select the method for preview and render (default: opencv)')
     parser.add_argument('--output-format', default='gif',

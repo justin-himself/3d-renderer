@@ -6,12 +6,12 @@ def quit_preview(controllable_vars):
 
     controllable_vars.preview_ends = True
 
-
+# control is reversed since move the object
 user_control_keymap = {
     'q': cam_move_forward,
     'e': cam_move_backward,
-    'a': cam_move_left,
-    'd': cam_move_right,
+    'a': cam_move_right,
+    'd': cam_move_left,
     's': cam_move_up,
     'w': cam_move_down,
     'enter': quit_preview
