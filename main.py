@@ -159,7 +159,7 @@ Warning: Running in Spyder, only basic rendering is supported,
 and performance is heavily bottlenecked.''')
         main(**spyder_interactive_args_input())
         print("Render finished, please check the output file")
-        return
+        exit(0)
 
     parser = argparse.ArgumentParser(
         description='3D Model Rendering Script written by Justin')
