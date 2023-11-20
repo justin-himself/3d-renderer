@@ -165,8 +165,8 @@ def render_by_matplotlib(
     import matplotlib.animation as animation
 
     if processes > 1:
-        from common.joblib.joblib import Parallel, delayed
-        from common.joblib_progress.joblib_progress import joblib_progress
+        from joblib import Parallel, delayed
+        from joblib_progress import joblib_progress
 
     # to make the gif loop, make the video length interger multiple of 200
     number_of_frames = int(np.ceil(video_length * fps / 200) * 200)
