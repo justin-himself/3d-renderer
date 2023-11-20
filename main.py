@@ -130,8 +130,7 @@ def main(
             screen_height=50,
             do_normal_clip=True),
         controllable_vars,
-        fps=5,
-        console_input=is_spyder,
+        fps=5
     )
     render_by_matplotlib(
         lambda x: rotation_animation(
