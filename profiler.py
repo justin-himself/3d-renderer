@@ -2,25 +2,32 @@ import cProfile
 import pstats
 import csv
 import io
+import time
 from main import *
-
+from obj_ops import * 
+from animation import *
+from usercontrol import * 
 
 pr = cProfile.Profile()
 
-origin_mesh = load_obj("test/teapot.obj")
+origin_mesh = load_objfile("models/teapot_158.obj")
 print(origin_mesh.shape)
-
 
 pr.enable()
 
-time1 = time.time()
 for i in range(10):
-    rotation_animation(origin_mesh, frame, i)
-time2 = time.time()
+    rotation_animation(
+            origin_mesh,
+            i,
+            controllable_vars = ControlableVars(),
+            draw_wireframe=False,
+            draw_filled=True,
+            screen_width=100,
+            screen_height=100
+        )
 
 pr.disable()
 
-print(time2-time1)
 s = io.StringIO()
 ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
 ps.print_stats()
@@ -69,7 +76,7 @@ for line in data:
 
 
 # Save data to data.csv
-with open("test/profiler.csv", "w", newline="") as output_file:
+with open("profiler.csv", "w", newline="") as output_file:
     csv_writer = csv.writer(output_file)
     csv_writer.writerow(["ncalls", "tottime", "percall",
                         "cumtime", "percall", "function"])
