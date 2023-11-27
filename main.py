@@ -44,7 +44,7 @@ def spyder_interactive_args_input():
 
     args['model_filepath'] = propmpt_input(
         "Model file path", "models/teapot_158.obj", str)
-    args['fps'] = propmpt_input("FPS", 30, int)
+    args['fps'] = propmpt_input("FPS", 15, int)
     args['output_style'] = propmpt_input("Output style", "filled", str)
     args['output_file'] = propmpt_input("Output file name", "output", str)
 
@@ -154,11 +154,13 @@ if __name__ == "__main__":
 
     if is_spyder():
         print('''
-Warning: Running in Spyder, only basic rendering is supported, 
-and performance is heavily bottlenecked.''')
+Warning: Spyder detected, most of the interactive features will not be available, 
+and performance is heavily bottlenecked.
+Press Enter to select the default option.''')
         main(**spyder_interactive_args_input())
         print("Render finished, please check the output file")
-        exit(0)
+        import sys
+        sys.exit(0)
 
     parser = argparse.ArgumentParser(
         description='3D Model Rendering Script written by Justin')

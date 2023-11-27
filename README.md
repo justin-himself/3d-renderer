@@ -31,9 +31,23 @@ To render a spinning toilet, use
 python3 main.py models/toilet_1451.obj output
 ```
 
-A window will pop up so you can adjust the object's positon. Press enter when you are satisfied and the render will start.
+A window will pop up so you can adjust the object's positon to the center. Press enter when you are satisfied and the render will start.
+
+**Warning:** Move the object too far into the screen or out of the edges will result in slow down, graphics glitchs and crashes.
 
 The result will be saved as `output.gif`
+
+### Running on Spyder
+
+**Warning**: Spyder lacks interactive feature and does not come with some optional dependencies. Most options are disabled if the progran detects spyder environment and the performance will be heavily degraded.
+
+1. Open `main.py` .
+2. Click run.
+3. In the console, input according to the instructions. It's recommended that you stck to the defaults.
+4. Wait patiently. Locate the output gif after it finishes.
+
+
+
 
 ## Models & Rendering
 
@@ -49,6 +63,7 @@ To genenerate such models, follow steps below
 6. Export as wavefront file and in the pop up menu, deselect every option (eg. normals) except for "Apply modifiers"
 
 This project uses multiprocessor cpu rendering. If you have a NVIDIA GPU, you can also download [Cupy](https://cupy.dev/) and replace `import numpy` to `import cupy`, which should give a decent performance boost. I was not able to test this out since I use an Apple Silicon Mac to develop the project.
+
 
 ## Demo 
 
