@@ -7,7 +7,7 @@
 
 ### Setup
 
-First, clone the project with all submodules
+First, clone the latest source code from github.
 
 ```bash
 git clone --recursive https://github.com/justin-himself/3d-renderer.git
